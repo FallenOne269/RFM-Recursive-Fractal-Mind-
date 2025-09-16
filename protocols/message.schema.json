@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RFM Agent Message",
+  "type": "object",
+  "required": ["id","timestamp","role","intent","content","trace_id"],
+  "properties": {
+    "id": {"type":"string"},
+    "parent_id": {"type":["string","null"]},
+    "timestamp": {"type":"string","format":"date-time"},
+    "role": {
+      "type":"string",
+      "enum":["orchestrator","planner","researcher","synthesizer","critic","guardian","broker","interface","archivist","memory_keeper"]
+    },
+    "intent": {
+      "type":"string",
+      "enum":["answer","plan","search","execute","verify","summarize","store"]
+    },
+    "content": {"type":"string"},
+    "context": {
+      "type":"object",
+      "properties": {
+        "topic":{"type":"string"},
+        "task_id":{"type":"string"},
+        "session_id":{"type":"string"}
+      },
+      "additionalProperties": true
+    },
+    "constraints": {
+      "type":"object",
+      "properties": {
+        "max_tokens":{"type":"integer"},
+        "safety":{"type":"array","items":{"type":"string"}},
+        "deadline_s":{"type":"integer"}
+      },
+      "additionalProperties": true
+    },
+    "tools_requested": {
+      "type":"array",
+      "items":{
+        "type":"object",
+        "required":["name","args"],
+        "properties":{
+          "name":{"type":"string"},
+          "args":{"type":"object"}
+        }
+      }
+    },
+    "memory_keys": {"type":"object"},
+    "citations": {
+      "type":"array",
+      "items":{
+        "type":"object",
+        "properties":{
+          "source":{"type":"string"},
+          "span":{"type":"string"}
+        },
+        "required":["source"]
+      }
+    },
+    "privacy": {"type":"string","enum":["public","internal","secret"]},
+    "trace_id": {"type":"string"}
+  },
+  "additionalProperties": false
+}
