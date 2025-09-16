@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RFAI Control Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Header Section -->
+        <header class="dashboard-header">
+            <div class="header-main">
+                <h1>Recursive Fractal Autonomous Intelligence</h1>
+                <div class="system-status">
+                    <span class="status-indicator operational" id="statusIndicator">OPERATIONAL</span>
+                </div>
+            </div>
+            <div class="key-metrics">
+                <div class="metric">
+                    <span class="metric-label">Performance</span>
+                    <span class="metric-value" id="currentPerformance">0.325</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Improvement</span>
+                    <span class="metric-value improvement" id="improvement">+112.3%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Active Agents</span>
+                    <span class="metric-value" id="activeAgents">8/12</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Tasks Completed</span>
+                    <span class="metric-value" id="tasksCompleted">5</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- Architecture Overview -->
+            <section class="dashboard-section architecture-overview">
+                <h3>System Architecture</h3>
+                <div class="architecture-content">
+                    <div class="fractal-hierarchy">
+                        <h4>Fractal Hierarchy</h4>
+                        <div class="hierarchy-levels" id="hierarchyLevels">
+                            <!-- Levels will be populated by JS -->
+                        </div>
+                    </div>
+                    <div class="agent-swarm">
+                        <h4>Agent Swarm (12 Units)</h4>
+                        <div class="swarm-visualization" id="swarmViz">
+                            <!-- Agent nodes will be populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Performance Metrics -->
+            <section class="dashboard-section performance-metrics">
+                <h3>Performance Evolution</h3>
+                <div class="chart-container" style="position: relative; height: 300px;">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+                <div class="performance-stats">
+                    <div class="stat">
+                        <span>Baseline:</span>
+                        <span>0.153</span>
+                    </div>
+                    <div class="stat">
+                        <span>Current:</span>
+                        <span>0.325</span>
+                    </div>
+                    <div class="stat">
+                        <span>Success Rate:</span>
+                        <span>100%</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Agent Status Panel -->
+            <section class="dashboard-section agent-status">
+                <h3>Agent Status Panel</h3>
+                <div class="agent-grid" id="agentGrid">
+                    <!-- Agent cards will be populated by JS -->
+                </div>
+            </section>
+
+            <!-- Fractal Parameters -->
+            <section class="dashboard-section fractal-params">
+                <h3>Fractal Parameter Distribution</h3>
+                <div class="param-visualization">
+                    <div class="param-levels" id="paramLevels">
+                        <!-- Parameter distribution will be populated by JS -->
+                    </div>
+                    <div class="param-stats">
+                        <div class="stat-item">
+                            <span>Total Parameters:</span>
+                            <span class="param-count">37,440</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Levels:</span>
+                            <span>4</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Control Panel -->
+            <section class="dashboard-section control-panel">
+                <h3>System Controls</h3>
+                <div class="controls">
+                    <button class="btn btn--primary control-btn" id="simulateTask">
+                        <span class="btn-icon">▶</span>
+                        Simulate Task
+                    </button>
+                    <button class="btn btn--secondary control-btn" id="triggerOptimization">
+                        <span class="btn-icon">⚡</span>
+                        Trigger Optimization
+                    </button>
+                    <button class="btn btn--outline control-btn" id="adjustParams">
+                        <span class="btn-icon">⚙</span>
+                        Adjust Parameters
+                    </button>
+                    <button class="btn btn--outline control-btn" id="emergencyStop">
+                        <span class="btn-icon">⏹</span>
+                        Emergency Stop
+                    </button>
+                </div>
+                <div class="quantum-status">
+                    <h4>Quantum Processor</h4>
+                    <div class="quantum-metrics">
+                        <div class="quantum-metric">
+                            <span>Qubits:</span>
+                            <span class="quantum-value">16</span>
+                        </div>
+                        <div class="quantum-metric">
+                            <span>Coherence:</span>
+                            <span class="quantum-value">84.7%</span>
+                        </div>
+                        <div class="quantum-metric">
+                            <span>Error Rate:</span>
+                            <span class="quantum-value">2.3%</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- System Logs -->
+            <section class="dashboard-section system-logs">
+                <h3>System Activity Logs</h3>
+                <div class="log-container">
+                    <div class="log-output" id="logOutput">
+                        <!-- Logs will be populated by JS -->
+                    </div>
+                </div>
+                <div class="log-controls">
+                    <button class="btn btn--sm btn--outline" id="clearLogs">Clear</button>
+                    <button class="btn btn--sm btn--outline" id="exportLogs">Export</button>
+                    <label class="auto-scroll">
+                        <input type="checkbox" id="autoScroll" checked>
+                        Auto-scroll
+                    </label>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

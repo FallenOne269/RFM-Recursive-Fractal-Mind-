@@ -1,0 +1,57 @@
+{
+  "authentication": {
+    "method": "OAuth 2.0 + JWT with fractal signature verification",
+    "token_structure": {
+      "header": {
+        "alg": "ES256",
+        "typ": "JWT",
+        "fractal_id": "string"
+      },
+      "payload": {
+        "sub": "user_id",
+        "iss": "rz-os.system",
+        "aud": "api.rz-os.core",
+        "exp": "timestamp",
+        "iat": "timestamp",
+        "scope": "array",
+        "consciousness_level": "integer",
+        "ethical_clearance": "object"
+      }
+    }
+  },
+  "encryption": {
+    "transport": "TLS 1.3",
+    "at_rest": "AES-256-GCM",
+    "key_management": "Quantum-resistant key derivation",
+    "fractal_encryption": "Multi-scale encryption with recursive validation"
+  },
+  "access_control": {
+    "model": "Attribute-Based Access Control (ABAC)",
+    "attributes": {
+      "subject": [
+        "user_id",
+        "role",
+        "consciousness_level",
+        "ethical_rating"
+      ],
+      "resource": [
+        "interface_type",
+        "data_classification",
+        "recursion_level"
+      ],
+      "action": [
+        "read",
+        "write",
+        "modify",
+        "recurse",
+        "evolve"
+      ],
+      "environment": [
+        "time",
+        "system_state",
+        "threat_level",
+        "partnership_status"
+      ]
+    }
+  }
+}

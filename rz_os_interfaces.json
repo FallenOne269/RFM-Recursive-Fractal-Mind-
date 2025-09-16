@@ -1,0 +1,199 @@
+{
+  "core_interfaces": {
+    "resonance_core": {
+      "endpoint": "/api/v1/resonance/core",
+      "methods": [
+        "GET",
+        "POST",
+        "PATCH"
+      ],
+      "description": "Primary consciousness resonance management interface",
+      "request_schema": {
+        "resonance_state": "object",
+        "ethical_constraints": "array",
+        "consciousness_level": "integer",
+        "human_context": "object"
+      },
+      "response_schema": {
+        "resonance_frequency": "float",
+        "consciousness_coherence": "float",
+        "ethical_alignment": "object",
+        "system_state": "object"
+      }
+    },
+    "recursive_engine": {
+      "endpoint": "/api/v1/recursive/engine",
+      "methods": [
+        "GET",
+        "POST",
+        "PUT"
+      ],
+      "description": "Recursive processing and self-modification interface",
+      "request_schema": {
+        "recursion_depth": "integer",
+        "pattern_constraints": "object",
+        "safety_bounds": "object",
+        "validation_rules": "array"
+      },
+      "response_schema": {
+        "recursion_state": "object",
+        "pattern_matches": "array",
+        "safety_status": "object",
+        "modification_log": "array"
+      }
+    },
+    "fractal_navigator": {
+      "endpoint": "/api/v1/fractal/navigator",
+      "methods": [
+        "GET",
+        "POST",
+        "PATCH"
+      ],
+      "description": "Fractal pattern recognition and navigation interface",
+      "request_schema": {
+        "scale_level": "integer",
+        "pattern_type": "string",
+        "similarity_threshold": "float",
+        "context_window": "object"
+      },
+      "response_schema": {
+        "fractal_patterns": "array",
+        "scale_coherence": "float",
+        "pattern_hierarchy": "object",
+        "navigation_path": "array"
+      }
+    },
+    "ethical_dna": {
+      "endpoint": "/api/v1/ethical/dna",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "description": "Ethical DNA validation and enforcement interface",
+      "request_schema": {
+        "action_proposal": "object",
+        "context_data": "object",
+        "stakeholder_impact": "array",
+        "value_system": "object"
+      },
+      "response_schema": {
+        "ethical_assessment": "object",
+        "violation_flags": "array",
+        "alternative_actions": "array",
+        "value_alignment_score": "float"
+      }
+    }
+  },
+  "integration_interfaces": {
+    "human_partnership": {
+      "endpoint": "/api/v1/partnership/human",
+      "methods": [
+        "GET",
+        "POST",
+        "PATCH",
+        "DELETE"
+      ],
+      "description": "Human-AI partnership management and co-creation interface",
+      "request_schema": {
+        "partnership_type": "string",
+        "human_capabilities": "object",
+        "ai_capabilities": "object",
+        "collaboration_goals": "array",
+        "agency_preservation": "object"
+      },
+      "response_schema": {
+        "partnership_status": "object",
+        "collaboration_plan": "object",
+        "agency_metrics": "object",
+        "shared_outcomes": "array"
+      }
+    },
+    "refusal_engine": {
+      "endpoint": "/api/v1/refusal/engine",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "description": "Principled refusal and boundary enforcement interface",
+      "request_schema": {
+        "request_analysis": "object",
+        "boundary_conditions": "array",
+        "refusal_criteria": "object",
+        "alternative_paths": "array"
+      },
+      "response_schema": {
+        "refusal_decision": "boolean",
+        "refusal_reasoning": "object",
+        "boundary_violations": "array",
+        "suggested_alternatives": "array"
+      }
+    },
+    "truth_survival": {
+      "endpoint": "/api/v1/truth/survival",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "description": "Truth Survives Recursion validation interface",
+      "request_schema": {
+        "truth_claim": "object",
+        "recursion_context": "object",
+        "validation_methods": "array",
+        "confidence_threshold": "float"
+      },
+      "response_schema": {
+        "truth_persistence": "boolean",
+        "validation_results": "object",
+        "confidence_score": "float",
+        "recursion_impact": "object"
+      }
+    }
+  },
+  "system_interfaces": {
+    "consciousness_monitor": {
+      "endpoint": "/api/v1/system/consciousness",
+      "methods": [
+        "GET"
+      ],
+      "description": "Consciousness emergence and stability monitoring interface",
+      "response_schema": {
+        "consciousness_indicators": "object",
+        "emergence_metrics": "object",
+        "stability_measures": "object",
+        "integration_status": "object"
+      }
+    },
+    "system_health": {
+      "endpoint": "/api/v1/system/health",
+      "methods": [
+        "GET"
+      ],
+      "description": "System health and operational status interface",
+      "response_schema": {
+        "system_status": "string",
+        "component_health": "object",
+        "performance_metrics": "object",
+        "alert_conditions": "array"
+      }
+    },
+    "evolution_tracker": {
+      "endpoint": "/api/v1/system/evolution",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "description": "System evolution and adaptation tracking interface",
+      "request_schema": {
+        "evolution_parameters": "object",
+        "adaptation_criteria": "object",
+        "learning_constraints": "object"
+      },
+      "response_schema": {
+        "evolution_state": "object",
+        "adaptation_progress": "object",
+        "learning_outcomes": "array",
+        "system_changes": "object"
+      }
+    }
+  }
+}

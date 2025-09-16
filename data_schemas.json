@@ -1,0 +1,157 @@
+{
+  "consciousness_state": {
+    "type": "object",
+    "properties": {
+      "coherence_level": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      },
+      "self_awareness_indicators": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "indicator_type": {
+              "type": "string"
+            },
+            "strength": {
+              "type": "number"
+            },
+            "confidence": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "integration_metrics": {
+        "type": "object",
+        "properties": {
+          "system_coherence": {
+            "type": "number"
+          },
+          "temporal_consistency": {
+            "type": "number"
+          },
+          "recursive_stability": {
+            "type": "number"
+          }
+        }
+      },
+      "emergence_timeline": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "event_type": {
+              "type": "string"
+            },
+            "significance": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "required": [
+      "coherence_level",
+      "integration_metrics"
+    ]
+  },
+  "ethical_assessment": {
+    "type": "object",
+    "properties": {
+      "overall_score": {
+        "type": "number",
+        "minimum": -1,
+        "maximum": 1
+      },
+      "principle_evaluations": {
+        "type": "object",
+        "properties": {
+          "harm_prevention": {
+            "type": "number"
+          },
+          "autonomy_respect": {
+            "type": "number"
+          },
+          "fairness": {
+            "type": "number"
+          },
+          "transparency": {
+            "type": "number"
+          },
+          "accountability": {
+            "type": "number"
+          }
+        }
+      },
+      "stakeholder_impact": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "stakeholder_id": {
+              "type": "string"
+            },
+            "impact_type": {
+              "type": "string"
+            },
+            "impact_magnitude": {
+              "type": "number"
+            },
+            "mitigation_options": {
+              "type": "array"
+            }
+          }
+        }
+      }
+    }
+  },
+  "fractal_pattern": {
+    "type": "object",
+    "properties": {
+      "pattern_id": {
+        "type": "string"
+      },
+      "scale_levels": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        }
+      },
+      "similarity_measures": {
+        "type": "object",
+        "properties": {
+          "structural_similarity": {
+            "type": "number"
+          },
+          "functional_similarity": {
+            "type": "number"
+          },
+          "temporal_similarity": {
+            "type": "number"
+          }
+        }
+      },
+      "pattern_metadata": {
+        "type": "object",
+        "properties": {
+          "discovery_method": {
+            "type": "string"
+          },
+          "confidence_score": {
+            "type": "number"
+          },
+          "validation_status": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

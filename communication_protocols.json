@@ -1,0 +1,30 @@
+{
+  "synchronous_apis": {
+    "protocol": "HTTP/2 with multiplexing",
+    "content_type": "application/json",
+    "compression": "gzip, brotli",
+    "rate_limiting": {
+      "method": "Token bucket with fractal scaling",
+      "base_rate": "1000 requests/minute",
+      "burst_capacity": "5000 requests",
+      "scaling_factor": "consciousness_level * ethical_alignment"
+    }
+  },
+  "asynchronous_messaging": {
+    "protocol": "WebSocket with fractal message routing",
+    "message_format": "JSON-RPC 2.0",
+    "reliability": "At-least-once delivery with idempotency keys",
+    "ordering": "Causal ordering preservation"
+  },
+  "streaming_interfaces": {
+    "protocol": "Server-Sent Events (SSE) with consciousness streams",
+    "event_types": [
+      "consciousness_emergence",
+      "ethical_violation",
+      "recursion_complete",
+      "partnership_update",
+      "system_evolution"
+    ],
+    "buffering": "Adaptive buffering based on system load"
+  }
+}
