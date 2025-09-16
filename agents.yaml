@@ -1,46 +1,49 @@
+version: 1
+defaults:
+  model: frm-core
+  max_tokens: 2048
+  retrieval:
+    top_k: 8
+    namespace: "rfm"
+  retention_days: 30
 
-**Key modules**
-- `orchestrator/` central router, plan runner
-- `agents/` concrete roles (planner, researcher, critic…)
-- `tools/` tool adapters with JSON schema
-- `memory/` vector/kv stores and retrieval
-- `ethics/` Ethical DNA policy and audits
-- `api/` FastAPI endpoints (spawn, message, graph, infer)
-- `tests/` smoke, tool mocks, red-team
+agents:
+  orchestrator:
+    policy: orchestration.v1
+    children: [planner, researcher, synthesizer, critic, guardian, broker, interface, archivist, memory_keeper]
+  planner:
+    policy: plan.graph.v1
+    tools: [memory.search, tool.invoke]
+  researcher:
+    policy: research.web.v1
+    tools: [web.search, web.fetch, memory.search]
+  synthesizer:
+    policy: synth.compose.v1
+    tools: [memory.search]
+  critic:
+    policy: critique.verify.v1
+    tools: [ethics.check, web.search]
+  guardian:
+    policy: ethics.guard.v1
+    tools: [ethics.check]
+  broker:
+    policy: tool.broker.v1
+    tools: [*]   # broker can call any registered tool
+  interface:
+    policy: interface.api.v1
+  archivist:
+    policy: archive.save.v1
+  memory_keeper:
+    policy: memory.maintain.v1
 
----
-
-## 3) Agent taxonomy
-
-| Role            | Purpose                                                | Typical tools                        | Outputs                         |
-|-----------------|--------------------------------------------------------|--------------------------------------|---------------------------------|
-| Orchestrator    | Intake, routing, plan graph execution                  | Memory, Planner, Tool Broker         | Plan graph, final answer        |
-| Planner         | Derive structured steps and dependencies               | Memory, Tool Broker                  | DAG of steps (YAML/JSON)        |
-| Researcher      | Retrieve, browse, extract                              | Web, Files, Embeddings               | Evidence, quotes, notes         |
-| Synthesizer     | Merge evidence, reason, propose drafts                 | Memory, Formatter                    | Drafts, summaries               |
-| Critic          | Adversarial review, check claims, risk assessment      | Ethical DNA, Web verify              | Issues list, fix suggestions    |
-| Tool Broker     | Validate tool calls, rate limit, retries               | All tools                            | Tool results + provenance       |
-| Memory Keeper   | Store/recall, dedupe, session stitching                | Vector DB, KV store                  | Context, embeddings, episodes   |
-| Interface Agent | API/UI adapter, schema validation                      | FastAPI                              | JSON responses, SSE streams     |
-| Guardian        | Policy enforcement, secrets, red-team tests            | Ethical DNA                          | Allow/deny, audit logs          |
-| Archivist       | Artifacts, checkpoints, releases                       | Filesystem, object store             | JSONL logs, reports, bundles    |
-
----
-
-## 4) Agent lifecycle
-
-**Loop pseudocode**
-```python
-def agent_loop(msg, state, policy):
-    obs = perceive(msg)
-    ctx = memory.retrieve(obs, policy.retrieval)
-    plan = policy.plan(obs, ctx)
-    for step in plan:
-        precheck = ethics.check(step, ctx, policy)
-        if not precheck.ok: return reject(precheck)
-        out = act(step, tools, ctx)
-        post = ethics.post_check(out, step, policy)
-        if not post.ok: out = remediate(out, post)
-        reflect = policy.reflect(obs, out, ctx)
-        memory.update(reflect, retention=policy.retention)
-    return finalize(plan, out, traces=True)
+tools:
+  web.search:
+    args_schema: { q: string, recency_days: integer?, limit: integer? }
+  web.fetch:
+    args_schema: { url: string, timeout_s: integer? }
+  memory.search:
+    args_schema: { query: string, top_k: integer?, filters: object? }
+  tool.invoke:
+    args_schema: { name: string, args: object }
+  ethics.check:
+    args_schema: { intent: string, payload: object }
