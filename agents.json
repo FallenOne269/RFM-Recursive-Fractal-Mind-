@@ -1,0 +1,15 @@
+{
+  "id": "uuid",
+  "parent_id": "uuid|null",
+  "timestamp": "iso8601",
+  "role": "orchestrator|planner|researcher|synthesizer|critic|guardian|broker|interface",
+  "intent": "answer|plan|search|execute|verify|summarize|store",
+  "content": "string",
+  "context": {"topic": "string", "task_id": "uuid", "session_id": "uuid"},
+  "constraints": {"max_tokens": 2048, "safety": ["no_pii","no_illegal"], "deadline_s": 30},
+  "tools_requested": [{"name":"web_search","args":{"q":"..."}}, {"name":"file_read","args":{"path":"..."}}],
+  "memory_keys": {"query":"...", "k": 8},
+  "citations": [{"source":"url or doc_id","span":"L10-L20"}],
+  "privacy": "public|internal|secret",
+  "trace_id": "uuid"
+}
