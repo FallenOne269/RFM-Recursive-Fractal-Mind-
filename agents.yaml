@@ -1,0 +1,46 @@
+
+**Key modules**
+- `orchestrator/` central router, plan runner
+- `agents/` concrete roles (planner, researcher, critic…)
+- `tools/` tool adapters with JSON schema
+- `memory/` vector/kv stores and retrieval
+- `ethics/` Ethical DNA policy and audits
+- `api/` FastAPI endpoints (spawn, message, graph, infer)
+- `tests/` smoke, tool mocks, red-team
+
+---
+
+## 3) Agent taxonomy
+
+| Role            | Purpose                                                | Typical tools                        | Outputs                         |
+|-----------------|--------------------------------------------------------|--------------------------------------|---------------------------------|
+| Orchestrator    | Intake, routing, plan graph execution                  | Memory, Planner, Tool Broker         | Plan graph, final answer        |
+| Planner         | Derive structured steps and dependencies               | Memory, Tool Broker                  | DAG of steps (YAML/JSON)        |
+| Researcher      | Retrieve, browse, extract                              | Web, Files, Embeddings               | Evidence, quotes, notes         |
+| Synthesizer     | Merge evidence, reason, propose drafts                 | Memory, Formatter                    | Drafts, summaries               |
+| Critic          | Adversarial review, check claims, risk assessment      | Ethical DNA, Web verify              | Issues list, fix suggestions    |
+| Tool Broker     | Validate tool calls, rate limit, retries               | All tools                            | Tool results + provenance       |
+| Memory Keeper   | Store/recall, dedupe, session stitching                | Vector DB, KV store                  | Context, embeddings, episodes   |
+| Interface Agent | API/UI adapter, schema validation                      | FastAPI                              | JSON responses, SSE streams     |
+| Guardian        | Policy enforcement, secrets, red-team tests            | Ethical DNA                          | Allow/deny, audit logs          |
+| Archivist       | Artifacts, checkpoints, releases                       | Filesystem, object store             | JSONL logs, reports, bundles    |
+
+---
+
+## 4) Agent lifecycle
+
+**Loop pseudocode**
+```python
+def agent_loop(msg, state, policy):
+    obs = perceive(msg)
+    ctx = memory.retrieve(obs, policy.retrieval)
+    plan = policy.plan(obs, ctx)
+    for step in plan:
+        precheck = ethics.check(step, ctx, policy)
+        if not precheck.ok: return reject(precheck)
+        out = act(step, tools, ctx)
+        post = ethics.post_check(out, step, policy)
+        if not post.ok: out = remediate(out, post)
+        reflect = policy.reflect(obs, out, ctx)
+        memory.update(reflect, retention=policy.retention)
+    return finalize(plan, out, traces=True)
