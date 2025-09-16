@@ -17,4 +17,15 @@ RFM / Recursive Fractal Mind — Agent System Specification
 ---
 
 ## 2) Architecture at a glance
+"[User/API] ─▶ [Orchestrator]
+│
+├─▶ [Planner] ─▶ plan graph (DAG of steps)
+│ │
+│ ├─▶ [Tool Broker] ─▶ tools (web, code, files, etc.)
+│ └─▶ [Worker Agents] (Researcher, Synthesizer, Critic, etc.)
+│
+├─▶ [Ethical DNA] (policy checks; RZ-OS guardrails)
+├─▶ [Memory Service] (short/long/episodic/symbolic)
+└─▶ [Telemetry] (traces, metrics, artifacts)"
+
 
