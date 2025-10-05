@@ -1,0 +1,21 @@
+{
+  "system_name": "RFAI_v1.0",
+  "max_fractal_depth": 4,
+  "base_dimensions": 64,
+  "swarm_size": 12,
+  "quantum_enabled": true,
+  "learning_settings": {
+    "base_learning_rate": 0.001,
+    "adaptation_factor": 1.1,
+    "performance_threshold": 0.95
+  },
+  "architecture_evolution": {
+    "mutation_rate": 0.1,
+    "crossover_rate": 0.3,
+    "selection_pressure": 0.8
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(levelname)s - %(message)s"
+  }
+}
