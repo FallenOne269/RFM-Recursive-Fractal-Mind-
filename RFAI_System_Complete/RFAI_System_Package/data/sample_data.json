@@ -1,0 +1,30 @@
+{
+  "sample_tasks": [
+    {
+      "id": "pattern_recognition_001",
+      "type": "pattern_recognition",
+      "complexity": 0.6,
+      "description": "Fractal pattern analysis task",
+      "expected_performance": 0.7
+    },
+    {
+      "id": "optimization_001",
+      "type": "optimization",
+      "complexity": 0.8,
+      "description": "Multi-objective optimization problem",
+      "expected_performance": 0.6
+    },
+    {
+      "id": "memory_management_001",
+      "type": "memory_management",
+      "complexity": 0.4,
+      "description": "Hierarchical memory compression",
+      "expected_performance": 0.8
+    }
+  ],
+  "benchmark_datasets": {
+    "fractal_patterns": "Synthetic fractal data for pattern recognition",
+    "optimization_landscapes": "Multi-modal optimization test functions",
+    "memory_sequences": "Hierarchical data structures for memory tests"
+  }
+}
