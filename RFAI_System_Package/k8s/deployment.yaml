@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rfai-system
+  labels:
+    app: rfai-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rfai-system
+  template:
+    metadata:
+      labels:
+        app: rfai-system
+    spec:
+      containers:
+        - name: rfai-api
+          image: rfai-system:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: RFAI_CONFIG_PATH
+              value: /config/default_config.json
+            - name: RFAI_SECRET_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: rfai-secrets
+                  key: api-token
+          ports:
+            - containerPort: 8000
+          volumeMounts:
+            - name: rfai-config
+              mountPath: /config
+      volumes:
+        - name: rfai-config
+          configMap:
+            name: rfai-config

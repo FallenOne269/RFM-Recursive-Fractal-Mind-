@@ -1,0 +1,48 @@
+{
+  "system": {
+    "name": "Recursive Fractal Autonomous Intelligence",
+    "max_fractal_depth": 4,
+    "base_dimensions": 64,
+    "swarm_size": 12,
+    "quantum_enabled": true,
+    "recursion_limit": 4
+  },
+  "modules": {
+    "fractal_engine": {
+      "plugin": "fractal_engine",
+      "settings": {
+        "max_depth": 4,
+        "base_dimensions": 64,
+        "branching_factor": 2,
+        "recursion_limit": 4
+      }
+    },
+    "swarm_coordinator": {
+      "plugin": "swarm_coordinator",
+      "settings": {
+        "swarm_size": 12
+      }
+    },
+    "quantum_processor": {
+      "plugin": "quantum_processor",
+      "enabled": true,
+      "settings": {
+        "qubits": 8,
+        "noise_level": 0.02,
+        "entanglement_bias": 0.5
+      }
+    },
+    "meta_learner": {
+      "plugin": "meta_learner",
+      "settings": {
+        "base_learning_rate": 0.01,
+        "adaptation_factor": 1.05,
+        "performance_threshold": 0.75
+      }
+    }
+  },
+  "persistence": {
+    "state_path": "state/rfai_state.json",
+    "autosave": false
+  }
+}
