@@ -58,7 +58,7 @@ def run_evolution_simulation(rfai, iterations=10):
     final_performance = np.mean(rfai.system_state['performance_history'][-5:])
     improvement = final_performance - initial_performance if initial_performance > 0 else final_performance
 
-    print(f"Evolution completed:")
+    print("Evolution completed:")
     print(f"  Initial performance: {initial_performance:.3f}")
     print(f"  Final performance: {final_performance:.3f}")
     print(f"  Improvement: {improvement:+.3f} ({improvement/max(0.001, initial_performance)*100:+.1f}%)")
