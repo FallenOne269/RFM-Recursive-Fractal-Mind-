@@ -162,8 +162,9 @@ def validate_task(task: Dict[str, Any]) -> Dict[str, Any]:
     if data is not None and hasattr(data, "tolist"):
         sanitized["data"] = data.tolist()
     validator = Draft202012Validator(TASK_SCHEMA)
-    errors = sorted(validator.iter_errors(sanitized), key=lambda err: err.path)
-    if errors:
+    if errors := sorted(
+        validator.iter_errors(sanitized), key=lambda err: err.path
+    ):
         messages = ", ".join(error.message for error in errors)
         raise ConfigurationError(f"Invalid task payload: {messages}")
     return sanitized
