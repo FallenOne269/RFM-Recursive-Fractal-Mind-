@@ -1,0 +1,9 @@
+version: '3.9'
+services:
+  rfai-api:
+    build: .
+    environment:
+      - RFAI_API_KEY=${RFAI_API_KEY:-local-key}
+    ports:
+      - "8000:8000"
+    command: ["uvicorn", "rfai_system.api.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
