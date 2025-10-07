@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rfai-prometheus-deployment
+  labels:
+    app: rfai-prometheus
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: rfai-prometheus
+  template:
+    metadata:
+      labels:
+        app: rfai-prometheus
+    spec:
+      containers:
+        - name: rfai-core
+          image: your-registry.example.com/rfai-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rfai-service
+  labels:
+    app: rfai-prometheus
+spec:
+  type: ClusterIP
+  selector:
+    app: rfai-prometheus
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+      protocol: TCP
