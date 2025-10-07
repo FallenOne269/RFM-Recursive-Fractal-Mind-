@@ -108,6 +108,14 @@ def test_swarm_coordinator_synergy_bounds(config: Dict[str, Any]) -> None:
     assert 0.0 <= output["synergy"] <= 1.0
     assert output["selected_agents"], "At least one agent participates"
 
+def test_swarm_coordinator_unknown_task_type(config: Dict[str, Any]) -> None:
+    """SwarmCoordinator handles unknown task types gracefully and selects agents."""
+    coordinator = SwarmCoordinator(config=config["modules"]["swarm_coordinator"]["settings"])
+    unknown_task = {"id": "swarm_unknown", "type": "alien_inference", "complexity": 0.5}
+    output = coordinator.process(unknown_task)
+    assert 0.0 <= output["synergy"] <= 1.0, "Synergy should be within [0, 1] for unknown task types"
+    assert output["selected_agents"], "Fallback should select at least one agent for unknown task types"
+
 
 def test_quantum_processor_disabled() -> None:
     """When disabled the quantum processor returns an inactive state."""
