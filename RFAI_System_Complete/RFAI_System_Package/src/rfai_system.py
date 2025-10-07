@@ -1,24 +1,47 @@
-"""
-Recursive Fractal Autonomous Intelligence (RFAI) System
-=======================================================
+"""Recursive Fractal Autonomous Intelligence (RFAI) System."""
 
-A complete implementation of recursive fractal autonomous intelligence 
-integrating fractal neural architectures, swarm intelligence, quantum-classical 
-hybrid processing, and meta-learning optimization.
-
-Author: RFAI Research Team
-Date: September 2025
-Version: 1.0.0
-"""
+import json
+import logging
+import math
+import os
+import random
+import time
+import uuid
+from copy import deepcopy
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
-import json
-import math
-import random
-from datetime import datetime
-from typing import Dict, List, Tuple, Any, Optional
-from dataclasses import dataclass
-import logging
+
+try:
+    from .contracts import (
+        BenchmarkMetrics,
+        BenchmarkReport,
+        CONTRACT_REGISTRY,
+        ParameterSweepEntry,
+        ParameterSweepReport,
+        PluginCompatibility,
+        PluginMetadata,
+        PluginRegistry,
+        ProcessingReport,
+        SubsystemContract,
+        TaskSpecification,
+    )
+except ImportError:  # pragma: no cover - fallback for direct module execution
+    from contracts import (  # type: ignore
+        BenchmarkMetrics,
+        BenchmarkReport,
+        CONTRACT_REGISTRY,
+        ParameterSweepEntry,
+        ParameterSweepReport,
+        PluginCompatibility,
+        PluginMetadata,
+        PluginRegistry,
+        ProcessingReport,
+        SubsystemContract,
+        TaskSpecification,
+    )
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -26,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class FractalModule:
-    """Self-similar processing module with recursive structure"""
+    """Self-similar processing module with recursive structure."""
     level: int
     dimensions: int
     sub_modules: List['FractalModule']
@@ -40,30 +63,33 @@ class FractalModule:
         if self.activation_state is None:
             self.activation_state = np.zeros(self.dimensions)
 
-@dataclass  
+@dataclass
 class AutonomousAgent:
-    """Individual agent in the swarm intelligence system"""
+    """Individual agent in the swarm intelligence system."""
     agent_id: str
     specialization: str
     capabilities: List[str]
     knowledge_base: Dict[str, Any]
     performance_metrics: Dict[str, float]
 
+class TaskProcessingError(RuntimeError):
+    """Raised when a task cannot be processed by the system."""
+
+
 class RecursiveFractalAutonomousIntelligence:
-    """Main RFAI system implementing the integrated architecture"""
+    """Main RFAI system implementing the integrated architecture."""
 
     def __init__(self, 
                  max_fractal_depth: int = 5,
                  base_dimensions: int = 128,
                  swarm_size: int = 50,
                  quantum_enabled: bool = True,
-                 config_path: str = None):
+                 config_path: Optional[str] = None):
 
         logger.info("Initializing Recursive Fractal Autonomous Intelligence System...")
 
-        # Load configuration if provided
         if config_path and os.path.exists(config_path):
-            with open(config_path, 'r') as f:
+            with open(config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
                 max_fractal_depth = config.get('max_fractal_depth', max_fractal_depth)
                 base_dimensions = config.get('base_dimensions', base_dimensions)
@@ -74,43 +100,83 @@ class RecursiveFractalAutonomousIntelligence:
         self.base_dims = base_dimensions
         self.swarm_size = swarm_size
         self.quantum_enabled = quantum_enabled
+        self.core_version = "1.1.0"
 
-        # Initialize fractal hierarchy
+        self.contracts: Dict[str, SubsystemContract] = CONTRACT_REGISTRY
+        self.plugin_registry = PluginRegistry(core_version=self.core_version)
+        self._register_core_plugins()
+
         logger.info("Building fractal hierarchy...")
         self.fractal_hierarchy = self._build_fractal_hierarchy()
 
-        # Initialize agent swarm
         logger.info("Initializing agent swarm...")
         self.agent_swarm = self._initialize_swarm()
 
-        # Initialize meta-learning components
         logger.info("Setting up meta-learning system...")
         self.meta_optimizer = self._initialize_meta_optimizer()
 
-        # Initialize quantum-classical hybrid components
+        self.quantum_processor = None
         if quantum_enabled:
             logger.info("Initializing quantum-classical hybrid processor...")
             self.quantum_processor = self._initialize_quantum_processor()
 
-        # System state tracking
-        self.system_state = {
+        self.system_state: Dict[str, Any] = {
             'performance_history': [],
             'adaptation_events': [],
             'emergent_behaviors': [],
-            'optimization_trajectory': []
+            'optimization_trajectory': [],
+            'fallback_events': [],
         }
 
-        # Self-modification capabilities
         self.architecture_search = self._initialize_architecture_search()
+        self._snapshots: Dict[str, Dict[str, Any]] = {}
 
-        logger.info(f"RFAI System initialized successfully!")
+        logger.info("RFAI System initialized successfully!")
         logger.info(f"- Fractal depth: {self.max_depth} levels")
         logger.info(f"- Base dimensions: {self.base_dims}")
         logger.info(f"- Swarm size: {len(self.agent_swarm)} agents")
         logger.info(f"- Quantum processing: {self.quantum_enabled}")
 
+    def _register_core_plugins(self) -> None:
+        """Register built-in subsystem implementations for compatibility tracking."""
+        plugins = [
+            PluginMetadata(
+                name='fractal_processor',
+                version='1.1.0',
+                compatibility=PluginCompatibility(core_versions=[self.core_version]),
+                description='Default recursive fractal processor',
+                capabilities=['fractal_processing'],
+            ),
+            PluginMetadata(
+                name='swarm_coordinator',
+                version='1.1.0',
+                compatibility=PluginCompatibility(core_versions=[self.core_version]),
+                description='Default agent swarm coordination',
+                capabilities=['swarm_coordination'],
+            ),
+            PluginMetadata(
+                name='meta_learning_core',
+                version='1.1.0',
+                compatibility=PluginCompatibility(core_versions=[self.core_version]),
+                description='Meta-learning strategy for self-improvement',
+                capabilities=['meta_learning'],
+            ),
+            PluginMetadata(
+                name='quantum_hybrid',
+                version='1.1.0',
+                compatibility=PluginCompatibility(core_versions=[self.core_version]),
+                description='Quantum-classical hybrid simulation',
+                capabilities=['quantum_processing'],
+            ),
+        ]
+        for plugin in plugins:
+            try:
+                self.plugin_registry.register(plugin)
+            except ValueError as exc:
+                logger.warning("Plugin registration skipped: %s", exc)
+
     def _build_fractal_hierarchy(self) -> Dict[int, List[FractalModule]]:
-        """Build the fractal hierarchy with self-similar modules"""
+        """Build the fractal hierarchy with self-similar modules."""
         hierarchy = {}
 
         for level in range(self.max_depth):
@@ -149,7 +215,7 @@ class RecursiveFractalAutonomousIntelligence:
         return hierarchy
 
     def _initialize_swarm(self) -> List[AutonomousAgent]:
-        """Initialize the autonomous agent swarm"""
+        """Initialize the autonomous agent swarm."""
         agents = []
         specializations = [
             'pattern_recognition', 'optimization', 'memory_management',
@@ -181,7 +247,7 @@ class RecursiveFractalAutonomousIntelligence:
         return agents
 
     def _generate_capabilities(self, specialization: str) -> List[str]:
-        """Generate capabilities based on agent specialization"""
+        """Generate capabilities based on agent specialization."""
         capability_map = {
             'pattern_recognition': ['fractal_pattern_analysis', 'anomaly_detection', 'similarity_matching'],
             'optimization': ['gradient_optimization', 'evolutionary_search', 'quantum_optimization'],
@@ -195,7 +261,7 @@ class RecursiveFractalAutonomousIntelligence:
         return capability_map.get(specialization, ['general_processing'])
 
     def _initialize_meta_optimizer(self) -> Dict[str, Any]:
-        """Initialize meta-learning optimization system"""
+        """Initialize meta-learning optimization system."""
         return {
             'learning_rate_adaptation': {
                 'base_rate': 0.001,
@@ -215,7 +281,7 @@ class RecursiveFractalAutonomousIntelligence:
         }
 
     def _initialize_quantum_processor(self) -> Dict[str, Any]:
-        """Initialize quantum-classical hybrid processing"""
+        """Initialize quantum-classical hybrid processing."""
         return {
             'qubit_allocation': max(4, self.base_dims // 4),
             'entanglement_patterns': self._generate_entanglement_patterns(),
@@ -225,7 +291,7 @@ class RecursiveFractalAutonomousIntelligence:
         }
 
     def _generate_entanglement_patterns(self) -> List[List[int]]:
-        """Generate entanglement patterns for quantum processing"""
+        """Generate entanglement patterns for quantum processing."""
         patterns = []
         qubit_count = max(4, self.base_dims // 4)
 
@@ -239,7 +305,7 @@ class RecursiveFractalAutonomousIntelligence:
         return patterns if patterns else [[0, 1]]
 
     def _initialize_architecture_search(self) -> Dict[str, Any]:
-        """Initialize neural architecture search for self-modification"""
+        """Initialize neural architecture search for self-modification."""
         return {
             'search_space': {
                 'module_types': ['fractal_conv', 'attention', 'recursive_rnn', 'quantum_gate'],
@@ -261,7 +327,7 @@ class RecursiveFractalAutonomousIntelligence:
         }
 
     def fractal_processing(self, input_data: np.ndarray, level: int = 0) -> np.ndarray:
-        """Recursive fractal processing with self-similar patterns"""
+        """Recursive fractal processing with self-similar patterns."""
         if level >= self.max_depth:
             return input_data
 
@@ -312,14 +378,18 @@ class RecursiveFractalAutonomousIntelligence:
 
         return level_output
 
-    def swarm_coordination(self, task: Dict[str, Any]) -> Dict[str, Any]:
-        """Coordinate swarm agents for collaborative problem solving"""
-        participating_agents = np.random.choice(self.agent_swarm, size=min(5, len(self.agent_swarm)), replace=False)
+    def swarm_coordination(self, task: TaskSpecification) -> Dict[str, Any]:
+        """Coordinate swarm agents for collaborative problem solving."""
+        if not self.agent_swarm:
+            raise TaskProcessingError("Agent swarm is empty; cannot coordinate task")
+
+        selection_size = min(5, len(self.agent_swarm))
+        participating_agents = np.random.choice(self.agent_swarm, size=selection_size, replace=False)
 
         results = {}
         for agent in participating_agents:
             base_performance = agent.performance_metrics['task_completion_rate']
-            task_complexity = task.get('complexity', 0.5)
+            task_complexity = task.complexity
 
             success_rate = max(0, min(1, base_performance - task_complexity * 0.2 + np.random.normal(0, 0.1)))
 
@@ -334,7 +404,7 @@ class RecursiveFractalAutonomousIntelligence:
         success_rates = [r['success_rate'] for r in results.values()]
 
         return {
-            'task_id': task.get('id', 'unknown'),
+            'task_id': task.task_id,
             'overall_success_rate': np.mean(success_rates),
             'participating_agents': list(results.keys()),
             'individual_results': results,
@@ -342,7 +412,7 @@ class RecursiveFractalAutonomousIntelligence:
         }
 
     def _simulate_quantum_computation(self, data: np.ndarray) -> np.ndarray:
-        """Simulate quantum computation"""
+        """Simulate quantum computation."""
         if not self.quantum_enabled:
             return data
 
@@ -378,7 +448,7 @@ class RecursiveFractalAutonomousIntelligence:
         return result
 
     def quantum_classical_hybrid_processing(self, data: np.ndarray) -> np.ndarray:
-        """Quantum-classical hybrid processing"""
+        """Quantum-classical hybrid processing."""
         if not self.quantum_enabled:
             return self.fractal_processing(data)
 
@@ -388,7 +458,7 @@ class RecursiveFractalAutonomousIntelligence:
         return classical_result
 
     def meta_learning_optimization(self) -> Dict[str, Any]:
-        """Meta-learning system for continuous self-improvement"""
+        """Meta-learning system for continuous self-improvement."""
         return {
             'architecture_changes': [],
             'parameter_updates': ['learning_rate_adjustment'],
@@ -397,7 +467,7 @@ class RecursiveFractalAutonomousIntelligence:
         }
 
     def _calculate_performance_score(self, results: Dict[str, Any]) -> float:
-        """Calculate overall performance score"""
+        """Calculate overall performance score."""
         scores = []
 
         if 'fractal_output' in results:
@@ -414,29 +484,56 @@ class RecursiveFractalAutonomousIntelligence:
 
         return np.mean(scores) if scores else 0.5
 
-    def process_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
-        """Main task processing pipeline"""
-        logger.info(f"Processing task: {task.get('id', 'unknown')}")
+    def process_task(self, task: Union[TaskSpecification, Dict[str, Any]]) -> Dict[str, Any]:
+        """Main task processing pipeline.
+
+        Parameters
+        ----------
+        task:
+            A :class:`TaskSpecification` instance or a dictionary payload adhering to the
+            ``task_ingestion`` contract.
+
+        Returns
+        -------
+        Dict[str, Any]
+            Serialized :class:`ProcessingReport` for compatibility with existing clients.
+
+        Raises
+        ------
+        TaskProcessingError
+            If validation fails or a subsystem raises an unrecoverable exception.
+        """
+
+        task_spec = self._ensure_task_spec(task)
+        logger.info("Processing task: %s", task_spec.task_id)
         start_time = datetime.now()
 
-        input_data = np.real(np.array(task.get('data', np.random.randn(self.base_dims))))
+        try:
+            input_data = task_spec.normalised_data(self.base_dims)
+        except ValueError as exc:
+            raise TaskProcessingError(str(exc)) from exc
 
-        results = {}
+        results: Dict[str, Any] = {}
 
-        # Fractal processing
         fractal_result = self.fractal_processing(input_data)
         results['fractal_output'] = fractal_result
 
-        # Quantum-classical hybrid processing
+        fallback_reason: Optional[str] = None
         if self.quantum_enabled:
             quantum_result = self.quantum_classical_hybrid_processing(input_data)
             results['quantum_output'] = quantum_result
+        else:
+            results['quantum_output'] = fractal_result.copy()
+            fallback_reason = 'quantum_disabled'
+            self.system_state['fallback_events'].append({
+                'task_id': task_spec.task_id,
+                'timestamp': start_time.isoformat(),
+                'reason': fallback_reason,
+            })
 
-        # Swarm coordination
-        swarm_result = self.swarm_coordination(task)
+        swarm_result = self.swarm_coordination(task_spec)
         results['swarm_output'] = swarm_result
 
-        # Meta-learning optimization
         meta_result = self.meta_learning_optimization()
         results['meta_optimization'] = meta_result
 
@@ -446,20 +543,43 @@ class RecursiveFractalAutonomousIntelligence:
         performance_score = self._calculate_performance_score(results)
         self.system_state['performance_history'].append(performance_score)
 
-        final_result = {
-            'task_id': task.get('id', 'unknown'),
-            'processing_time': processing_time,
-            'performance_score': performance_score,
-            'component_results': results,
-            'system_adaptations': meta_result,
-            'timestamp': end_time.isoformat()
-        }
+        report = ProcessingReport(
+            task_id=task_spec.task_id,
+            performance_score=performance_score,
+            processing_time=processing_time,
+            components=results,
+            fallback_reason=fallback_reason,
+            timestamp=end_time.isoformat(),
+        )
 
-        logger.info(f"Task completed - Performance: {performance_score:.3f}")
-        return final_result
+        logger.info("Task completed - Performance: %.3f", performance_score)
+        return report.to_dict()
+
+    def process_task_report(self, task: Union[TaskSpecification, Dict[str, Any]]) -> ProcessingReport:
+        """Process a task and return a structured :class:`ProcessingReport`."""
+
+        result = self.process_task(task)
+        return ProcessingReport(
+            task_id=result['task_id'],
+            performance_score=result['performance_score'],
+            processing_time=result['processing_time'],
+            components=result['component_results'],
+            fallback_reason=result['fallback_reason'],
+            timestamp=result['timestamp'],
+        )
+
+    def _ensure_task_spec(self, task: Union[TaskSpecification, Dict[str, Any]]) -> TaskSpecification:
+        if isinstance(task, TaskSpecification):
+            return task
+        if not isinstance(task, dict):
+            raise TaskProcessingError("Task must be a TaskSpecification or dict")
+        try:
+            return TaskSpecification.from_payload(task, expected_size=self.base_dims)
+        except ValueError as exc:
+            raise TaskProcessingError(str(exc)) from exc
 
     def get_system_status(self) -> Dict[str, Any]:
-        """Get comprehensive system status"""
+        """Get comprehensive system status."""
         total_params = sum(sum(module.weights.size for module in modules) 
                           for modules in self.fractal_hierarchy.values())
 
@@ -486,13 +606,18 @@ class RecursiveFractalAutonomousIntelligence:
             'performance': {
                 'tasks_processed': len(self.system_state['performance_history']),
                 'avg_performance': np.mean(self.system_state['performance_history']) if self.system_state['performance_history'] else 0.0,
-                'learning_trend': np.polyfit(range(len(self.system_state['performance_history'])), 
+                'learning_trend': np.polyfit(range(len(self.system_state['performance_history'])),
                                            self.system_state['performance_history'], 1)[0] if len(self.system_state['performance_history']) > 1 else 0.0
-            }
+            },
+            'plugins': {
+                name: {'version': meta.version, 'capabilities': meta.capabilities}
+                for name, meta in self.plugin_registry.list_plugins().items()
+            },
+            'contracts': {name: contract.version for name, contract in self.contracts.items()}
         }
 
-    def save_state(self, filepath: str):
-        """Save system state to file"""
+    def save_state(self, filepath: str) -> None:
+        """Save system state to file."""
         state = {
             'config': {
                 'max_depth': self.max_depth,
@@ -509,13 +634,170 @@ class RecursiveFractalAutonomousIntelligence:
 
         logger.info(f"System state saved to {filepath}")
 
-    def load_state(self, filepath: str):
-        """Load system state from file"""
+    def load_state(self, filepath: str) -> None:
+        """Load system state from file."""
         with open(filepath, 'r') as f:
             state = json.load(f)
 
         self.system_state = state.get('system_state', self.system_state)
         logger.info(f"System state loaded from {filepath}")
+
+    def create_snapshot(self, label: Optional[str] = None) -> str:
+        """Create an in-memory snapshot of the system state for rollback."""
+
+        snapshot_id = f"{label or 'snapshot'}-{uuid.uuid4().hex[:8]}"
+        agent_metrics = [deepcopy(agent.performance_metrics) for agent in self.agent_swarm]
+        self._snapshots[snapshot_id] = {
+            'system_state': deepcopy(self.system_state),
+            'agent_metrics': agent_metrics,
+            'quantum_enabled': self.quantum_enabled,
+        }
+        logger.info("Snapshot created: %s", snapshot_id)
+        return snapshot_id
+
+    def rollback_to_snapshot(self, snapshot_id: str) -> None:
+        """Rollback to a previously captured snapshot."""
+
+        snapshot = self._snapshots.get(snapshot_id)
+        if snapshot is None:
+            raise TaskProcessingError(f"Snapshot '{snapshot_id}' not found")
+
+        self.system_state = deepcopy(snapshot['system_state'])
+        for agent, metrics in zip(self.agent_swarm, snapshot['agent_metrics']):
+            agent.performance_metrics = deepcopy(metrics)
+        self.quantum_enabled = snapshot['quantum_enabled']
+        if self.quantum_enabled and self.quantum_processor is None:
+            self.quantum_processor = self._initialize_quantum_processor()
+        logger.info("Rolled back to snapshot: %s", snapshot_id)
+
+    def get_contract(self, name: str) -> SubsystemContract:
+        """Retrieve the declared contract for a subsystem."""
+
+        if name not in self.contracts:
+            raise KeyError(f"Unknown subsystem contract '{name}'")
+        return self.contracts[name]
+
+    def benchmark_against_baseline(
+        self,
+        tasks: Sequence[Union[TaskSpecification, Dict[str, Any]]],
+        baseline_overrides: Optional[Dict[str, Any]] = None,
+    ) -> BenchmarkReport:
+        """Benchmark the current system against a baseline configuration."""
+
+        normalized_tasks = [self._ensure_task_spec(task) for task in tasks]
+        baseline_config = {
+            'max_fractal_depth': self.max_depth,
+            'base_dimensions': self.base_dims,
+            'swarm_size': self.swarm_size,
+            'quantum_enabled': False,
+        }
+        if baseline_overrides:
+            baseline_config.update(baseline_overrides)
+
+        baseline_system = RecursiveFractalAutonomousIntelligence(**baseline_config)
+
+        baseline_metrics = self._run_benchmark_suite(baseline_system, normalized_tasks)
+        current_metrics = self._run_benchmark_suite(self, normalized_tasks)
+        deltas = {
+            'mean_score_delta': current_metrics.mean_score - baseline_metrics.mean_score,
+            'mean_latency_delta': current_metrics.mean_latency - baseline_metrics.mean_latency,
+            'throughput_delta': current_metrics.throughput - baseline_metrics.throughput,
+        }
+        return BenchmarkReport(
+            baseline=baseline_metrics,
+            current=current_metrics,
+            deltas=deltas,
+        )
+
+    def _run_benchmark_suite(
+        self,
+        system: 'RecursiveFractalAutonomousIntelligence',
+        tasks: Iterable[TaskSpecification],
+    ) -> BenchmarkMetrics:
+        start = time.perf_counter()
+        latencies: List[float] = []
+        scores: List[float] = []
+
+        for task in tasks:
+            report = system.process_task(task.to_payload())
+            latencies.append(report['processing_time'])
+            scores.append(report['performance_score'])
+
+        total_time = max(time.perf_counter() - start, 1e-9)
+        mean_latency = float(np.mean(latencies)) if latencies else 0.0
+        mean_score = float(np.mean(scores)) if scores else 0.0
+        throughput = len(scores) / total_time
+        return BenchmarkMetrics(mean_score=mean_score, mean_latency=mean_latency, throughput=throughput)
+
+    def run_parameter_sweep(
+        self,
+        parameter_grid: Dict[str, Sequence[Any]],
+        tasks: Sequence[Union[TaskSpecification, Dict[str, Any]]],
+    ) -> ParameterSweepReport:
+        """Execute a parameter sweep and log synergies or degeneracies."""
+
+        normalized_tasks = [self._ensure_task_spec(task) for task in tasks]
+        combinations = self._expand_parameter_grid(parameter_grid)
+        entries: List[ParameterSweepEntry] = []
+
+        for params in combinations:
+            config = {
+                'max_fractal_depth': params.get('max_fractal_depth', self.max_depth),
+                'base_dimensions': params.get('base_dimensions', self.base_dims),
+                'swarm_size': params.get('swarm_size', self.swarm_size),
+                'quantum_enabled': params.get('quantum_enabled', self.quantum_enabled),
+            }
+            candidate_system = RecursiveFractalAutonomousIntelligence(**config)
+            metrics = candidate_system._run_benchmark_suite(candidate_system, normalized_tasks)
+            note = 'quantum_enabled' in params and not params['quantum_enabled']
+            entries.append(
+                ParameterSweepEntry(
+                    parameters=params,
+                    metrics=metrics,
+                    notes='Quantum bypass' if note else '',
+                )
+            )
+
+        scores = np.array([entry.metrics.mean_score for entry in entries])
+        if scores.size == 0:
+            synergy_candidates: List[Dict[str, Any]] = []
+            degeneracy_risks: List[Dict[str, Any]] = []
+        else:
+            threshold_high = float(np.percentile(scores, 75))
+            threshold_low = float(np.percentile(scores, 25))
+            synergy_candidates = [
+                {**entry.parameters, 'mean_score': entry.metrics.mean_score}
+                for entry in entries
+                if entry.metrics.mean_score >= threshold_high
+            ]
+            degeneracy_risks = [
+                {**entry.parameters, 'mean_score': entry.metrics.mean_score}
+                for entry in entries
+                if entry.metrics.mean_score <= threshold_low
+            ]
+
+        for candidate in synergy_candidates:
+            logger.info("Parameter synergy detected: %s", candidate)
+        for risk in degeneracy_risks:
+            logger.warning("Parameter degeneracy detected: %s", risk)
+
+        return ParameterSweepReport(entries=entries, synergy_candidates=synergy_candidates, degeneracy_risks=degeneracy_risks)
+
+    def _expand_parameter_grid(self, parameter_grid: Dict[str, Sequence[Any]]) -> List[Dict[str, Any]]:
+        keys = list(parameter_grid.keys())
+        if not keys:
+            return [{}]
+
+        combinations: List[Dict[str, Any]] = [{}]
+        for key in keys:
+            new_combinations: List[Dict[str, Any]] = []
+            for value in parameter_grid[key]:
+                for combo in combinations:
+                    updated = dict(combo)
+                    updated[key] = value
+                    new_combinations.append(updated)
+            combinations = new_combinations
+        return combinations
 
 if __name__ == "__main__":
     # Example usage

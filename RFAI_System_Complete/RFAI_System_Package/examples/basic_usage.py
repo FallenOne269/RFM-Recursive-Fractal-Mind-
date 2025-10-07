@@ -13,6 +13,7 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from rfai_system import RecursiveFractalAutonomousIntelligence
+from contracts import TaskSpecification
 
 def main():
     print("RFAI System - Basic Usage Example")
@@ -27,13 +28,15 @@ def main():
         quantum_enabled=True
     )
 
-    # Display system status
+    # Display system status and contract details
     status = rfai.get_system_status()
     print(f"System Status: {status['status']}")
     print(f"Fractal Levels: {status['fractal_hierarchy']['levels']}")
     print(f"Total Parameters: {status['fractal_hierarchy']['total_parameters']:,}")
     print(f"Active Agents: {status['agent_swarm']['active_agents']}/{status['agent_swarm']['total_agents']}")
     print(f"Quantum Qubits: {status['quantum_processor']['qubits']}")
+    task_contract = rfai.get_contract('task_ingestion')
+    print(f"Task contract version: {task_contract.version}")
     print()
 
     # Create sample tasks
@@ -67,11 +70,13 @@ def main():
     # Process tasks
     print("Processing tasks...")
     results = []
+    task_specs = []
     for i, task in enumerate(tasks, 1):
         print(f"Task {i}: {task['id']} (complexity: {task['complexity']:.2f})")
 
         result = rfai.process_task(task)
         results.append(result)
+        task_specs.append(TaskSpecification.from_payload(task, expected_size=64))
 
         print(f"  Performance: {result['performance_score']:.3f}")
         print(f"  Processing time: {result['processing_time']:.4f}s")
@@ -89,6 +94,28 @@ def main():
     if len(performance_history) > 1:
         improvement = performance_history[-1] - performance_history[0]
         print(f"Overall improvement: {improvement:+.3f} ({improvement/performance_history[0]*100:+.1f}%)")
+
+    # Demonstrate benchmarking and parameter sweep utilities
+    print("\nBenchmarking against classical baseline...")
+    benchmark = rfai.benchmark_against_baseline(task_specs)
+    print(f"  Mean score delta: {benchmark.deltas['mean_score_delta']:+.4f}")
+    print(f"  Mean latency delta: {benchmark.deltas['mean_latency_delta']:+.6f}s")
+
+    print("\nParameter sweep (quantum toggle, swarm size)...")
+    sweep_report = rfai.run_parameter_sweep(
+        parameter_grid={'quantum_enabled': [True, False], 'swarm_size': [8, 12]},
+        tasks=task_specs,
+    )
+    print(f"  Tried {len(sweep_report.entries)} combinations")
+    if sweep_report.synergy_candidates:
+        print(f"  Synergy candidate: {sweep_report.synergy_candidates[0]}")
+    if sweep_report.degeneracy_risks:
+        print(f"  Degeneracy risk: {sweep_report.degeneracy_risks[0]}")
+
+    snapshot_id = rfai.create_snapshot('example')
+    print(f"Snapshot captured: {snapshot_id}")
+    rfai.rollback_to_snapshot(snapshot_id)
+    print("State rollback complete")
 
     print("\nExample completed successfully!")
 
