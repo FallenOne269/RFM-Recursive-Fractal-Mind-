@@ -1,0 +1,9 @@
+version: '3.9'
+services:
+  rfai-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      API_KEY: ${API_KEY:-changeme}
+    restart: unless-stopped
