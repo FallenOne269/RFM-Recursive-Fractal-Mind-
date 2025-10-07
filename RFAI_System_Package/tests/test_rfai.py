@@ -134,6 +134,15 @@ def test_meta_learner_adjusts_learning_rate() -> None:
     result = learner.process({"performance_hint": 0.2})
     assert result["learning_rate"] > initial
 
+def test_meta_learner_decreases_learning_rate() -> None:
+    """Meta learner decreases learning rate when performance improves above threshold."""
+    learner = MetaLearner(
+        {"base_learning_rate": 0.01, "adaptation_factor": 2.0, "performance_threshold": 0.9}
+    )
+    initial = learner.learning_rate
+    result = learner.process({"performance_hint": 0.95})
+    assert result["learning_rate"] < initial
+
 
 def test_orchestrator_process_task(orchestrator: Orchestrator) -> None:
     """Orchestrator returns all component outputs for a task."""
