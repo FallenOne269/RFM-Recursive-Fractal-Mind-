@@ -127,8 +127,9 @@ def load_json_file(path: Path) -> Dict[str, Any]:
 def validate_config(config: Dict[str, Any]) -> Dict[str, Any]:
     """Validate configuration against the canonical schema."""
     validator = Draft202012Validator(CONFIG_SCHEMA)
-    errors = sorted(validator.iter_errors(config), key=lambda err: err.path)
-    if errors:
+    if errors := sorted(
+        validator.iter_errors(config), key=lambda err: err.path
+    ):
         messages = ", ".join(error.message for error in errors)
         raise ConfigurationError(f"Invalid configuration: {messages}")
     return config
