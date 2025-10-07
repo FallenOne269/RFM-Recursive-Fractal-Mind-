@@ -40,8 +40,10 @@ def generate_task(seed: int, complexity: float) -> Dict[str, Any]:
     data = rng.normal(0.0, 1.0, size=dimension)
     return {
         "id": f"advanced_{seed:03d}",
-        "type": rng.choice(["pattern_recognition", "optimization", "memory_management"]),
-        "complexity": float(complexity),
+        "type": rng.choice(
+            ["pattern_recognition", "optimization", "memory_management"]
+        ),
+        "complexity": complexity,
         "data": data,
         "priority": float(rng.uniform(0.5, 1.0)),
     }
