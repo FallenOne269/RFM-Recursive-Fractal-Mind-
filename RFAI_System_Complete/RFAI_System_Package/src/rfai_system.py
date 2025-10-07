@@ -354,10 +354,7 @@ class RecursiveFractalAutonomousIntelligence:
             quantum_input = np.pad(data, (0, qubit_count - data.size))
 
         norm = np.linalg.norm(quantum_input)
-        if norm > 0:
-            normalized_data = quantum_input / norm
-        else:
-            normalized_data = quantum_input
+        normalized_data = quantum_input / norm if norm > 0 else quantum_input
 
         quantum_state = normalized_data.copy().astype(complex)
         for i in range(len(quantum_state)):
@@ -383,9 +380,7 @@ class RecursiveFractalAutonomousIntelligence:
             return self.fractal_processing(data)
 
         quantum_result = self._simulate_quantum_computation(data)
-        classical_result = self.fractal_processing(quantum_result)
-
-        return classical_result
+        return self.fractal_processing(quantum_result)
 
     def meta_learning_optimization(self) -> Dict[str, Any]:
         """Meta-learning system for continuous self-improvement"""
@@ -421,24 +416,19 @@ class RecursiveFractalAutonomousIntelligence:
 
         input_data = np.real(np.array(task.get('data', np.random.randn(self.base_dims))))
 
-        results = {}
-
-        # Fractal processing
         fractal_result = self.fractal_processing(input_data)
-        results['fractal_output'] = fractal_result
+        swarm_result = self.swarm_coordination(task)
+        meta_result = self.meta_learning_optimization()
+
+        results = {
+            'fractal_output': fractal_result,
+            'swarm_output': swarm_result,
+            'meta_optimization': meta_result
+        }
 
         # Quantum-classical hybrid processing
         if self.quantum_enabled:
-            quantum_result = self.quantum_classical_hybrid_processing(input_data)
-            results['quantum_output'] = quantum_result
-
-        # Swarm coordination
-        swarm_result = self.swarm_coordination(task)
-        results['swarm_output'] = swarm_result
-
-        # Meta-learning optimization
-        meta_result = self.meta_learning_optimization()
-        results['meta_optimization'] = meta_result
+            results['quantum_output'] = self.quantum_classical_hybrid_processing(input_data)
 
         end_time = datetime.now()
         processing_time = (end_time - start_time).total_seconds()
@@ -463,8 +453,10 @@ class RecursiveFractalAutonomousIntelligence:
         total_params = sum(sum(module.weights.size for module in modules) 
                           for modules in self.fractal_hierarchy.values())
 
-        active_agents = len([agent for agent in self.agent_swarm 
-                           if agent.performance_metrics['task_completion_rate'] > 0.5])
+        active_agents = sum(
+            1 for agent in self.agent_swarm
+            if agent.performance_metrics['task_completion_rate'] > 0.5
+        )
 
         return {
             'system_id': 'RFAI_v1.0',
@@ -477,7 +469,9 @@ class RecursiveFractalAutonomousIntelligence:
             'agent_swarm': {
                 'total_agents': len(self.agent_swarm),
                 'active_agents': active_agents,
-                'specializations': list(set(agent.specialization for agent in self.agent_swarm))
+                'specializations': list({
+                    agent.specialization for agent in self.agent_swarm
+                })
             },
             'quantum_processor': {
                 'enabled': self.quantum_enabled,
