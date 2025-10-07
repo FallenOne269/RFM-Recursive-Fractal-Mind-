@@ -1,0 +1,13 @@
+{
+  "system_name": "My_RFAI_System",
+  "max_fractal_depth": 4,
+  "base_dimensions": 64,
+  "swarm_size": 12,
+  "quantum_enabled": true,
+  "learning_settings": {
+    "base_learning_rate": 0.001,
+    "adaptation_factor": 1.1,
+    "performance_threshold": 0.95
+  },
+  "note": "Customize these settings for your specific use case"
+}
