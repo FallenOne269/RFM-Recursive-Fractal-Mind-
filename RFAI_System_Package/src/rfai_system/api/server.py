@@ -55,7 +55,7 @@ def _ensure_all_keys(payload: Dict[str, Any]) -> Dict[str, Any]:
         "quantum_output": None,
         "meta_output": None,
     }
-    return {**template, **payload}
+    return template | payload
 
 
 @app.get("/health")
