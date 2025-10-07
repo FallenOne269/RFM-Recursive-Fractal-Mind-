@@ -14,7 +14,8 @@ import json
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from rfai_system import RecursiveFractalAutonomousIntelligence
+from rfai_system import RecursiveFractalAutonomousIntelligence, TaskProcessingError
+from contracts import TaskSpecification
 
 class TestRFAISystem(unittest.TestCase):
 
@@ -35,6 +36,7 @@ class TestRFAISystem(unittest.TestCase):
             'requirements': ['accuracy', 'speed'],
             'priority': 0.8
         }
+        self.task_spec = TaskSpecification.from_payload(self.test_task, expected_size=32)
 
     def test_system_initialization(self):
         """Test system initialization"""
@@ -55,7 +57,7 @@ class TestRFAISystem(unittest.TestCase):
 
     def test_swarm_coordination(self):
         """Test agent swarm coordination"""
-        result = self.rfai.swarm_coordination(self.test_task)
+        result = self.rfai.swarm_coordination(self.task_spec)
 
         self.assertIn('overall_success_rate', result)
         self.assertIn('participating_agents', result)
