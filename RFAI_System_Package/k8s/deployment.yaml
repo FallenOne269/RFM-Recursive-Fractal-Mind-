@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rfai-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rfai-system
+  template:
+    metadata:
+      labels:
+        app: rfai-system
+    spec:
+      containers:
+        - name: rfai-api
+          image: rfai-system:latest
+          env:
+            - name: RFAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rfai-secrets
+                  key: api-key
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 30

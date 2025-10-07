@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RFAI Task",
+  "type": "object",
+  "required": ["id", "type", "complexity", "payload", "metadata"],
+  "properties": {
+    "id": {"type": "string", "minLength": 1},
+    "type": {"type": "string", "minLength": 1},
+    "complexity": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+    "payload": {
+      "type": "array",
+      "items": {"type": "number"}
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": {"type": "string"}
+    },
+    "agent_load": {
+      "type": "array",
+      "items": {"type": "number"},
+      "default": []
+    }
+  },
+  "additionalProperties": false
+}

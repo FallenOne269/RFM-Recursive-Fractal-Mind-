@@ -1,0 +1,25 @@
+{
+  "fractal_engine": {
+    "max_depth": 4,
+    "base_dimensions": 64,
+    "noise_scale": 0.05
+  },
+  "swarm_coordinator": {
+    "swarm_size": 12,
+    "max_parallel_tasks": 4
+  },
+  "quantum_processor": {
+    "enabled": true,
+    "qubit_count": 16,
+    "sampling_runs": 32
+  },
+  "meta_learner": {
+    "base_learning_rate": 0.001,
+    "adaptation_factor": 1.1,
+    "performance_threshold": 0.6
+  },
+  "persistence": {
+    "state_dir": "data/state",
+    "version": "2.0.0"
+  }
+}
