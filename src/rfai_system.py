@@ -82,7 +82,7 @@ class RFAISystem:
                     module = importlib.import_module(spec.module_path)
                     component_cls = getattr(module, spec.class_name)
                     component = component_cls(validated_config)
-            except Exception as exc:  # pragma: no cover - defensive
+            except Exception:  # pragma: no cover - defensive
                 logger.exception("Failed to load component %s", name)
                 self.components[name] = None
                 continue

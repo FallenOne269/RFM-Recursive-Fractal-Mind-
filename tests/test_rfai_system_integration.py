@@ -13,7 +13,13 @@ from src.utils.state_manager import load_state, save_state
 def test_rfai_system_cycle_with_disabled_component() -> None:
     system = RFAISystem({"quantum_processor": {"enabled": False}})
     result = system.run_cycle([0.1, 0.2, 0.3])
-    assert set(result) >= {"fractal_output", "swarm_output", "quantum_output", "meta_output", "errors"}
+    assert set(result) >= {
+        "fractal_output",
+        "swarm_output",
+        "quantum_output",
+        "meta_output",
+        "errors",
+    }
     assert result["quantum_output"] is None
     assert result["errors"] == []
 
@@ -42,7 +48,13 @@ def test_api_endpoints(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert response.status_code == 200
     data = response.json()
-    assert set(data) >= {"fractal_output", "swarm_output", "quantum_output", "meta_output", "errors"}
+    assert set(data) >= {
+        "fractal_output",
+        "swarm_output",
+        "quantum_output",
+        "meta_output",
+        "errors",
+    }
 
     status_response = client.get("/status", headers={"X-API-Key": "secret"})
     assert status_response.status_code == 200

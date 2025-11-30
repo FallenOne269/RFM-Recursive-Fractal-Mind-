@@ -17,7 +17,8 @@ class SwarmCoordinator:
     def __init__(self, config: Dict[str, Any] | None = None) -> None:
         try:
             self.config = SwarmCoordinatorConfig(**(config or {}))
-        except ValidationError as exc:  # pragma: no cover - pydantic validation is exercised elsewhere
+        except ValidationError as exc:  # pragma: no cover
+            # pydantic validation is exercised elsewhere
             logger.error("Invalid swarm coordinator configuration: %s", exc)
             raise ValueError("Invalid swarm coordinator configuration") from exc
 
@@ -53,7 +54,11 @@ class SwarmCoordinator:
 
         confidence = max(
             0.0,
-            min(1.0, self.config.consensus_threshold * (1 - dispersion / (abs(consensus_value) + 1))),
+            min(
+                1.0,
+                self.config.consensus_threshold
+                * (1 - dispersion / (abs(consensus_value) + 1)),
+            ),
         )
 
         logger.debug(

@@ -6,3 +6,4 @@ mypy>=1.8
 black>=24.3
 flake8>=7.0
 httpx>=0.26
+jsonschema>=4.0

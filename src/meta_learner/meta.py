@@ -17,7 +17,8 @@ class MetaLearner:
     def __init__(self, config: Dict[str, Any] | None = None) -> None:
         try:
             self.config = MetaLearnerConfig(**(config or {}))
-        except ValidationError as exc:  # pragma: no cover - pydantic validation is exercised elsewhere
+        except ValidationError as exc:  # pragma: no cover
+            # pydantic validation is exercised elsewhere
             logger.error("Invalid meta learner configuration: %s", exc)
             raise ValueError("Invalid meta learner configuration") from exc
 
@@ -46,9 +47,18 @@ class MetaLearner:
         aggregate_score = mean(scores)
         adjusted_score = aggregate_score * (1 + self.config.momentum * self.config.learning_rate)
 
+        swarm_confidence = payload.get("swarm_output", {}).get("confidence", 0)
         recommendations = [
-            "Maintain current strategy" if adjusted_score >= 0.5 else "Increase exploration",
-            "Monitor confidence" if payload.get("swarm_output", {}).get("confidence", 0) < 0.5 else "Leverage consensus",
+            (
+                "Maintain current strategy"
+                if adjusted_score >= 0.5
+                else "Increase exploration"
+            ),
+            (
+                "Monitor confidence"
+                if swarm_confidence < 0.5
+                else "Leverage consensus"
+            ),
         ]
 
         logger.debug("Meta learner score %.3f", adjusted_score)

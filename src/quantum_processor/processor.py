@@ -17,7 +17,8 @@ class QuantumProcessor:
     def __init__(self, config: Dict[str, Any] | None = None) -> None:
         try:
             self.config = QuantumProcessorConfig(**(config or {}))
-        except ValidationError as exc:  # pragma: no cover - pydantic validation is exercised elsewhere
+        except ValidationError as exc:  # pragma: no cover
+            # pydantic validation is exercised elsewhere
             logger.error("Invalid quantum processor configuration: %s", exc)
             raise ValueError("Invalid quantum processor configuration") from exc
 

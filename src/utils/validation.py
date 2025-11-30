@@ -45,7 +45,9 @@ CONFIG_MODELS: Mapping[str, type[BaseModel]] = {
 }
 
 
-def validate_component_config(name: str, config: Optional[MutableMapping[str, Any]]) -> Dict[str, Any]:
+def validate_component_config(
+    name: str, config: Optional[MutableMapping[str, Any]]
+) -> Dict[str, Any]:
     """Validate and normalise a component configuration mapping."""
 
     model = CONFIG_MODELS.get(name)
