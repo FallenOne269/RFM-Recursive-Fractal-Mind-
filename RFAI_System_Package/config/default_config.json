@@ -11,15 +11,15 @@
   "quantum_processor": {
     "enabled": true,
     "qubit_count": 16,
-    "sampling_runs": 32
+    "sampling_runs": 128
   },
   "meta_learner": {
     "base_learning_rate": 0.001,
     "adaptation_factor": 1.1,
-    "performance_threshold": 0.6
+    "performance_threshold": 0.5
   },
   "persistence": {
-    "state_dir": "data/state",
-    "version": "2.0.0"
+    "state_dir": "state",
+    "version": "1.0.0"
   }
 }
