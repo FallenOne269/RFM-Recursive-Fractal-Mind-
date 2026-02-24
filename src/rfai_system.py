@@ -6,7 +6,7 @@ import importlib
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, Mapping, MutableMapping, Optional
+from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional
 
 from .utils.validation import (
     ValidationError,
@@ -49,12 +49,15 @@ class RFAISystem:
         self.config = dict(config or {})
         self.component_factories = dict(component_factories or {})
         self.components: Dict[str, Any] = {}
+        # Track which components are explicitly disabled vs failed to load.
+        self._disabled: List[str] = []
+        self._failed: List[str] = []
         self.system_state: Dict[str, Any] = {
             "cycles": 0,
             "last_run": None,
             "last_errors": [],
         }
-        self.last_outputs: Dict[str, Any] | None = None
+        self.last_outputs: Optional[Dict[str, Any]] = None
         self._initialise_components()
 
     def _initialise_components(self) -> None:
@@ -67,11 +70,13 @@ class RFAISystem:
             except (ValidationError, ValueError) as exc:
                 logger.error("Configuration for %s is invalid: %s", name, exc)
                 self.components[name] = None
+                self._failed.append(name)
                 continue
 
             if not enabled:
                 logger.info("Component %s is disabled via configuration", name)
                 self.components[name] = None
+                self._disabled.append(name)
                 continue
 
             try:
@@ -85,6 +90,7 @@ class RFAISystem:
             except Exception:  # pragma: no cover - defensive
                 logger.exception("Failed to load component %s", name)
                 self.components[name] = None
+                self._failed.append(name)
                 continue
 
             self.components[name] = component
@@ -153,10 +159,13 @@ class RFAISystem:
     def get_status(self) -> Dict[str, Any]:
         """Return orchestrator status information."""
 
+        component_status = {
+            name: self.components.get(name) is not None for name in DEFAULT_COMPONENTS
+        }
         return {
-            "components": {
-                name: self.components.get(name) is not None for name in DEFAULT_COMPONENTS
-            },
+            "components": component_status,
+            "disabled_components": list(self._disabled),
+            "failed_components": list(self._failed),
             "cycles": self.system_state["cycles"],
             "last_run": self.system_state["last_run"],
             "last_errors": list(self.system_state["last_errors"]),
