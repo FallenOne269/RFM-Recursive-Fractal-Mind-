@@ -10,6 +10,7 @@ import os
 import sys
 import subprocess
 import json
+import argparse
 
 def check_python_version():
     """Check if Python version is compatible"""
@@ -116,6 +117,23 @@ def create_example_config():
     print("✓ Example configuration created: config/my_config.json")
 
 def main():
+    parser = argparse.ArgumentParser(description="Install and verify the RFAI system")
+    parser.add_argument(
+        "--run-tests",
+        action="store_true",
+        help="Run tests without prompting",
+    )
+    parser.add_argument(
+        "--skip-tests",
+        action="store_true",
+        help="Skip test prompt in non-interactive environments",
+    )
+    args = parser.parse_args()
+
+    if args.run_tests and args.skip_tests:
+        print("❌ Choose either --run-tests or --skip-tests, not both")
+        sys.exit(2)
+
     print("RFAI System Installation")
     print("=" * 30)
 
@@ -136,8 +154,15 @@ def main():
     create_example_config()
 
     # Run tests (optional)
-    run_tests_input = input("\nRun test suite? (y/n): ").lower()
-    if run_tests_input in ['y', 'yes']:
+    should_run_tests = args.run_tests
+    if not args.run_tests and not args.skip_tests:
+        try:
+            run_tests_input = input("\nRun test suite? (y/n): ").strip().lower()
+            should_run_tests = run_tests_input in ['y', 'yes']
+        except EOFError:
+            print("\nℹ️ No interactive input available, skipping tests prompt")
+
+    if should_run_tests:
         run_tests()
 
     print("\n" + "=" * 50)
