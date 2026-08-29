@@ -9,12 +9,22 @@ See ``docs/RFC_ARCHITECTURE.md`` for the design and its provenance in the
 research collected in this repository.
 """
 
-from .constraints import ConstraintField, Invariant, forbidden_direction, forbidden_labels
+from .constraints import (
+    ConstraintField,
+    Invariant,
+    forbidden_direction,
+    forbidden_labels,
+)
 from .engine import Percept, RFCConfig, ResonantFractalCognition
 from .field import Coalition, Hypothesis, ResonantField
 from .lattice import LatticeConfig, Symbol, SymbolLattice
 from .metacognition import MetaConfig, MetaPolicy, MetaReport, MetaResonator
-from .operator import OperatorParams, ScaleInvariantOperator, StepReport, TUNABLE_PARAMETERS
+from .operator import (
+    OperatorParams,
+    ScaleInvariantOperator,
+    StepReport,
+    TUNABLE_PARAMETERS,
+)
 from .scale_space import ScaleBand, dyadic_decompose, temporal_bands
 from .telemetry import EpisodeRecord, Telemetry
 

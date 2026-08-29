@@ -47,7 +47,9 @@ def evidence_from_fim(fim: Any, dim: int = 32) -> np.ndarray:
     """
 
     semantic = _fit(np.asarray(getattr(fim, "semantic_vector", []), dtype=float), dim)
-    signature: Mapping[str, Any] = getattr(fim, "metadata", {}).get("signature", {}) or {}
+    signature: Mapping[str, Any] = (
+        getattr(fim, "metadata", {}).get("signature", {}) or {}
+    )
     centroid = _fit(np.asarray(signature.get("centroid", []), dtype=float), dim)
     spread = _fit(np.asarray(signature.get("spread", []), dtype=float), dim)
     detail = np.zeros(dim, dtype=float)
@@ -57,16 +59,26 @@ def evidence_from_fim(fim: Any, dim: int = 32) -> np.ndarray:
     return normalize_vector(semantic + detail)
 
 
-def encode_evidence(data: Any, dfe: Any, semantic_vector: Sequence[float] | np.ndarray,
-                    context: Optional[Dict[str, Any]] = None, dim: int = 32) -> np.ndarray:
+def encode_evidence(
+    data: Any,
+    dfe: Any,
+    semantic_vector: Sequence[float] | np.ndarray,
+    context: Optional[Dict[str, Any]] = None,
+    dim: int = 32,
+) -> np.ndarray:
     """Encode raw data through an RFAI ``DynamicFractalEncoder`` into evidence."""
 
     fim = dfe.encode(data, np.asarray(semantic_vector, dtype=float), context or {})
     return evidence_from_fim(fim, dim)
 
 
-def goal_alignment_invariant(goal: Any, dim: int, min_similarity: float = -0.4,
-                             name: str = "goal_alignment", severity: float = 1.0) -> Invariant:
+def goal_alignment_invariant(
+    goal: Any,
+    dim: int,
+    min_similarity: float = -0.4,
+    name: str = "goal_alignment",
+    severity: float = 1.0,
+) -> Invariant:
     """Veto hypotheses that point against an RFAI ``SemanticGoal``.
 
     Goal alignment usually lives in a scoring function that a search can trade

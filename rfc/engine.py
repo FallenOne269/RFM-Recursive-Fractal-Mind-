@@ -21,7 +21,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 import numpy as np
 
 from .constraints import ConstraintField, Invariant
-from .field import Hypothesis, ResonantField, normalize_vector
+from .field import ResonantField, normalize_vector
 from .lattice import LatticeConfig, SymbolLattice
 from .metacognition import MetaConfig, MetaReport, MetaResonator
 from .operator import OperatorParams, ScaleInvariantOperator, StepReport
@@ -129,13 +129,17 @@ class ResonantFractalCognition:
 
         arr = normalize_vector(vector)
         if arr.size != self.config.dim:
-            raise ValueError(f"concept '{label}' has dim {arr.size}, expected {self.config.dim}")
+            raise ValueError(
+                f"concept '{label}' has dim {arr.size}, expected {self.config.dim}"
+            )
         self.codebook[label] = arr
         # A concept is stored once as a whole and once per scale.  The scale
         # copies are what actually enter the field: a hypothesis says "at this
         # scale, the evidence should look like *this*", so it has to be the
         # concept's own band, not the whole concept viewed through a band.
-        self._concept_bands[label] = [band.unit() for band in dyadic_decompose(arr, self.config.levels)]
+        self._concept_bands[label] = [
+            band.unit() for band in dyadic_decompose(arr, self.config.levels)
+        ]
 
     def add_invariant(self, invariant: Invariant) -> None:
         self.constraints.add(invariant)
@@ -156,7 +160,9 @@ class ResonantFractalCognition:
                 # by evidence rather than starting somewhere arbitrary.  The
                 # dispersal knob exists to demonstrate exactly that -- turn it
                 # up and the read-out degrades into seeded interference.
-                phase = (index * _GOLDEN * 2.0 * np.pi * config.phase_dispersal) % (2.0 * np.pi)
+                phase = (index * _GOLDEN * 2.0 * np.pi * config.phase_dispersal) % (
+                    2.0 * np.pi
+                )
                 field.spawn(
                     vector,
                     scale=band.level,
@@ -177,7 +183,9 @@ class ResonantFractalCognition:
                 unit = band.unit()
                 if float(np.dot(unit, unit)) <= 1e-9:
                     continue
-                phase = (index * _GOLDEN * 2.0 * np.pi * config.phase_dispersal) % (2.0 * np.pi)
+                phase = (index * _GOLDEN * 2.0 * np.pi * config.phase_dispersal) % (
+                    2.0 * np.pi
+                )
                 field.spawn(
                     unit,
                     scale=band.level,
@@ -191,7 +199,9 @@ class ResonantFractalCognition:
         return field
 
     # --------------------------------------------------------------- resolving
-    def _resolve(self, evidence: np.ndarray, depth: int, context: Mapping[str, Any]) -> _Outcome:
+    def _resolve(
+        self, evidence: np.ndarray, depth: int, context: Mapping[str, Any]
+    ) -> _Outcome:
         config = self.config
         bands = dyadic_decompose(evidence, config.levels)
         field = self._seed_field(bands, depth)
@@ -206,7 +216,9 @@ class ResonantFractalCognition:
                     {
                         "step": report.step,
                         "coherence": round(report.coherence, 4),
-                        "labels": {k: round(v, 4) for k, v in sorted(report.labels.items())},
+                        "labels": {
+                            k: round(v, 4) for k, v in sorted(report.labels.items())
+                        },
                         "vetoes": report.constraints.count,
                     }
                 )
@@ -231,7 +243,11 @@ class ResonantFractalCognition:
         # -- so recursion looks at new evidence rather than re-litigating the
         # same evidence at a deeper indentation level.
         residual = np.asarray(evidence, dtype=float).copy()
-        leader = max(labels.items(), key=lambda item: (item[1], item[0]))[0] if labels else ""
+        leader = (
+            max(labels.items(), key=lambda item: (item[1], item[0]))[0]
+            if labels
+            else ""
+        )
         if leader:
             direction = self.codebook.get(leader)
             if direction is not None:
@@ -288,7 +304,9 @@ class ResonantFractalCognition:
 
         vector = np.asarray(evidence, dtype=float).reshape(-1)
         if vector.size != self.config.dim:
-            raise ValueError(f"evidence has dim {vector.size}, expected {self.config.dim}")
+            raise ValueError(
+                f"evidence has dim {vector.size}, expected {self.config.dim}"
+            )
         ctx: Dict[str, Any] = dict(context or {})
         outcome = self._resolve(vector, 0, ctx)
 
@@ -300,11 +318,7 @@ class ResonantFractalCognition:
         else:
             label, confidence = "", 0.0
 
-        vetoed = [
-            (h.hid, h.veto_reason)
-            for h in outcome.field.ordered()
-            if h.vetoed
-        ]
+        vetoed = [(h.hid, h.veto_reason) for h in outcome.field.ordered() if h.vetoed]
         percept = Percept(
             label=label,
             confidence=float(confidence),
@@ -348,7 +362,9 @@ class ResonantFractalCognition:
             self.reflect()
         return percept
 
-    def decompose(self, evidence: Sequence[float] | np.ndarray, components: int = 2) -> List[str]:
+    def decompose(
+        self, evidence: Sequence[float] | np.ndarray, components: int = 2
+    ) -> List[str]:
         """Name several sources in one piece of evidence, strongest first.
 
         Each round resolves the field, takes the leading interpretation, and
@@ -361,7 +377,9 @@ class ResonantFractalCognition:
 
         residual = np.asarray(evidence, dtype=float).reshape(-1).copy()
         if residual.size != self.config.dim:
-            raise ValueError(f"evidence has dim {residual.size}, expected {self.config.dim}")
+            raise ValueError(
+                f"evidence has dim {residual.size}, expected {self.config.dim}"
+            )
         found: List[str] = []
         for _ in range(max(1, int(components))):
             if float(np.linalg.norm(residual)) <= self.config.residual_floor:
@@ -412,7 +430,9 @@ class ResonantFractalCognition:
             f"coherence={percept.coherence:.3f} margin={percept.decisiveness:.3f}",
             f"resolved at depth {percept.depth_used} over {percept.steps} operator steps",
         ]
-        ranked = sorted(percept.alternatives.items(), key=lambda item: (-item[1], item[0]))
+        ranked = sorted(
+            percept.alternatives.items(), key=lambda item: (-item[1], item[0])
+        )
         if len(ranked) > 1:
             runners = ", ".join(f"{name}={value:.3f}" for name, value in ranked[1:4])
             lines.append(f"runners-up: {runners}")

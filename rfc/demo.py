@@ -22,8 +22,11 @@ def walkthrough(seed: int = 0) -> ResonantFractalCognition:
     mind = ResonantFractalCognition(
         RFCConfig(dim=dataset.dim, seed=seed),
         codebook=dataset.codebook,
-        invariants=[forbidden_labels("house_rule", [forbidden],
-                                     description=f"{forbidden} is off limits")],
+        invariants=[
+            forbidden_labels(
+                "house_rule", [forbidden], description=f"{forbidden} is off limits"
+            )
+        ],
     )
 
     print("=" * 72)
@@ -35,9 +38,11 @@ def walkthrough(seed: int = 0) -> ResonantFractalCognition:
     for index, (evidence, truth) in enumerate(dataset.samples[:6], start=1):
         percept = mind.perceive(evidence)
         mark = "ok " if percept.label == truth else "MISS"
-        print(f"[{index}] truth={truth} answer={percept.label} ({mark}) "
-              f"confidence={percept.confidence:.3f} coherence={percept.coherence:.3f} "
-              f"depth={percept.depth_used}")
+        print(
+            f"[{index}] truth={truth} answer={percept.label} ({mark}) "
+            f"confidence={percept.confidence:.3f} coherence={percept.coherence:.3f} "
+            f"depth={percept.depth_used}"
+        )
 
     print("\nlast episode, in full:")
     print(mind.explain(percept))

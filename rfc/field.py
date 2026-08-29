@@ -10,7 +10,7 @@ cancellation, and the read-out is the squared amplitude, normalised.
 from __future__ import annotations
 
 from dataclasses import dataclass, field as dataclass_field
-from typing import Dict, Iterable, List, Mapping, Optional, Sequence
+from typing import Dict, List, Mapping, Optional, Sequence
 
 import numpy as np
 
@@ -62,7 +62,9 @@ class Hypothesis:
 
     @property
     def complex_amplitude(self) -> complex:
-        return complex(self.amplitude * np.cos(self.phase), self.amplitude * np.sin(self.phase))
+        return complex(
+            self.amplitude * np.cos(self.phase), self.amplitude * np.sin(self.phase)
+        )
 
     @property
     def locked_amplitude(self) -> complex:
@@ -75,7 +77,9 @@ class Hypothesis:
         every scale telling the same story?", which lab-frame phase cannot.
         """
 
-        return complex(self.amplitude * np.cos(self.lag), self.amplitude * np.sin(self.lag))
+        return complex(
+            self.amplitude * np.cos(self.lag), self.amplitude * np.sin(self.lag)
+        )
 
     def claim(self) -> np.ndarray:
         """The whole thing this hypothesis is a claim about.
@@ -229,7 +233,7 @@ class ResonantField:
         """Born-style read-out: probability proportional to squared amplitude."""
 
         items = self.active()
-        weights = {h.hid: h.amplitude ** 2 for h in items}
+        weights = {h.hid: h.amplitude**2 for h in items}
         total = sum(weights.values())
         if total <= _EPS:
             return {hid: 0.0 for hid in weights}
@@ -252,7 +256,9 @@ class ResonantField:
         for hypothesis in self.active():
             if not hypothesis.label:
                 continue
-            sums[hypothesis.label] = sums.get(hypothesis.label, 0j) + hypothesis.locked_amplitude
+            sums[hypothesis.label] = (
+                sums.get(hypothesis.label, 0j) + hypothesis.locked_amplitude
+            )
         totals = {label: float(abs(value) ** 2) for label, value in sums.items()}
         total = sum(totals.values())
         if total <= _EPS:
@@ -267,7 +273,9 @@ class ResonantField:
             if not hypothesis.label:
                 continue
             bucket = by_scale.setdefault(hypothesis.scale, {})
-            bucket[hypothesis.label] = bucket.get(hypothesis.label, 0.0) + hypothesis.amplitude ** 2
+            bucket[hypothesis.label] = (
+                bucket.get(hypothesis.label, 0.0) + hypothesis.amplitude**2
+            )
         result: Dict[int, Dict[str, float]] = {}
         for scale, weights in by_scale.items():
             total = sum(weights.values())
@@ -299,7 +307,11 @@ class ResonantField:
             others = [other for key, other in vectors.items() if key != scale]
             reference = np.mean(others, axis=0)
             denominator = float(np.linalg.norm(vector) * np.linalg.norm(reference))
-            consensus[scale] = float(np.dot(vector, reference) / denominator) if denominator > _EPS else 0.0
+            consensus[scale] = (
+                float(np.dot(vector, reference) / denominator)
+                if denominator > _EPS
+                else 0.0
+            )
         return consensus
 
     def scale_balance(self) -> float:
@@ -310,14 +322,20 @@ class ResonantField:
             return 0.0
         levels = sorted(consensus)
         midpoint = len(levels) / 2.0
-        coarse = [consensus[level] for index, level in enumerate(levels) if index < midpoint]
-        fine = [consensus[level] for index, level in enumerate(levels) if index >= midpoint]
+        coarse = [
+            consensus[level] for index, level in enumerate(levels) if index < midpoint
+        ]
+        fine = [
+            consensus[level] for index, level in enumerate(levels) if index >= midpoint
+        ]
         if not coarse or not fine:
             return 0.0
         # Scaled up: the raw gap between two halves of a consensus score is a
         # few hundredths, and the metacognitive features are meant to be O(1)
         # deviations so that no one of them silently outvotes the rest.
-        return float(np.clip(_BALANCE_GAIN * (np.mean(fine) - np.mean(coarse)), -1.0, 1.0))
+        return float(
+            np.clip(_BALANCE_GAIN * (np.mean(fine) - np.mean(coarse)), -1.0, 1.0)
+        )
 
     def scale_complex(self) -> Dict[int, Dict[str, complex]]:
         """Per-scale, per-label complex amplitudes -- the read-out, unsummed."""
@@ -327,7 +345,9 @@ class ResonantField:
             if not hypothesis.label:
                 continue
             bucket = by_scale.setdefault(hypothesis.scale, {})
-            bucket[hypothesis.label] = bucket.get(hypothesis.label, 0j) + hypothesis.locked_amplitude
+            bucket[hypothesis.label] = (
+                bucket.get(hypothesis.label, 0j) + hypothesis.locked_amplitude
+            )
         return by_scale
 
     def scale_agreement(self) -> float:
@@ -352,22 +372,34 @@ class ResonantField:
         agreement: Dict[int, float] = {}
         for level in levels:
             held_out = {
-                label: sum(per_scale[other].get(label, 0j) for other in levels if other != level)
+                label: sum(
+                    per_scale[other].get(label, 0j)
+                    for other in levels
+                    if other != level
+                )
                 for label in labels
             }
-            reference = max(held_out.items(), key=lambda item: (abs(item[1]) ** 2, item[0]))[0]
+            reference = max(
+                held_out.items(), key=lambda item: (abs(item[1]) ** 2, item[0])
+            )[0]
             own = {label: abs(per_scale[level].get(label, 0j)) ** 2 for label in labels}
             total = sum(own.values())
             agreement[level] = float(own[reference] / total) if total > _EPS else 0.0
 
         midpoint = len(levels) / 2.0
-        coarse = [agreement[level] for index, level in enumerate(levels) if index < midpoint]
-        fine = [agreement[level] for index, level in enumerate(levels) if index >= midpoint]
+        coarse = [
+            agreement[level] for index, level in enumerate(levels) if index < midpoint
+        ]
+        fine = [
+            agreement[level] for index, level in enumerate(levels) if index >= midpoint
+        ]
         if not coarse or not fine:
             return 0.0
         return float(np.clip(np.mean(fine) - np.mean(coarse), -1.0, 1.0))
 
-    def measure(self, rng: Optional[np.random.Generator] = None) -> Optional[Hypothesis]:
+    def measure(
+        self, rng: Optional[np.random.Generator] = None
+    ) -> Optional[Hypothesis]:
         """Collapse the field to one hypothesis.
 
         Deterministic (arg-max) unless a generator is supplied, in which case
@@ -392,13 +424,17 @@ class ResonantField:
     def ambiguity(self) -> float:
         """Gap between the two leading labels; small means "still undecided"."""
 
-        labels = sorted(self.label_distribution().items(), key=lambda item: (-item[1], item[0]))
+        labels = sorted(
+            self.label_distribution().items(), key=lambda item: (-item[1], item[0])
+        )
         if len(labels) < 2:
             return 1.0 if labels else 0.0
         return float(labels[0][1] - labels[1][1])
 
     # ------------------------------------------------------------- coalitions
-    def coalitions(self, overlap_threshold: float = 0.6, phase_tolerance: float = 0.9) -> List[Coalition]:
+    def coalitions(
+        self, overlap_threshold: float = 0.6, phase_tolerance: float = 0.9
+    ) -> List[Coalition]:
         """Group hypotheses into the things the field is actually considering.
 
         Hypotheses carrying the same label are copies of one claim seen at
@@ -429,19 +465,29 @@ class ResonantField:
                 else:
                     overlap = float(np.dot(seed.vector, other.vector))
                     phase_gap = abs(np.angle(np.exp(1j * (other.lag - seed.lag))))
-                    grouped = overlap >= overlap_threshold and phase_gap <= phase_tolerance
+                    grouped = (
+                        overlap >= overlap_threshold and phase_gap <= phase_tolerance
+                    )
                 if grouped:
                     members.append(other)
                     taken.add(other.hid)
             amplitude = float(sum(m.amplitude for m in members))
             vector_sum = sum(m.locked_amplitude for m in members)
-            coherence = float(min(1.0, abs(vector_sum) / amplitude)) if amplitude > _EPS else 0.0
+            coherence = (
+                float(min(1.0, abs(vector_sum) / amplitude))
+                if amplitude > _EPS
+                else 0.0
+            )
             centroid = np.zeros(self.dim, dtype=float)
             for member in members:
                 centroid += member.amplitude * member.vector
             centroid = normalize_vector(centroid)
             labels = [m.label for m in members if m.label]
-            label = max(set(labels), key=lambda value: (labels.count(value), value)) if labels else ""
+            label = (
+                max(set(labels), key=lambda value: (labels.count(value), value))
+                if labels
+                else ""
+            )
             groups.append(
                 Coalition(
                     members=[m.hid for m in members],
@@ -474,7 +520,7 @@ class ResonantField:
         for hypothesis in items:
             groups.setdefault(hypothesis.scale, []).append(hypothesis)
         for group in groups.values():
-            total = float(np.sqrt(sum(h.amplitude ** 2 for h in group)))
+            total = float(np.sqrt(sum(h.amplitude**2 for h in group)))
             if total <= _EPS:
                 continue
             for hypothesis in group:
@@ -489,7 +535,7 @@ class ResonantField:
 
         if cap <= 0.0:
             return False
-        energy = float(np.sqrt(sum(h.amplitude ** 2 for h in self.ordered())))
+        energy = float(np.sqrt(sum(h.amplitude**2 for h in self.ordered())))
         if energy <= cap or energy <= _EPS:
             return False
         factor = cap / energy
@@ -518,7 +564,11 @@ class ResonantField:
                 dropped.append(hyp.hid)
         for hid in dropped:
             self.remove(hid)
-        survivors = [h for h in sorted(self.ordered(), key=lambda h: (-h.amplitude, h.hid)) if not h.vetoed]
+        survivors = [
+            h
+            for h in sorted(self.ordered(), key=lambda h: (-h.amplitude, h.hid))
+            if not h.vetoed
+        ]
         for hyp in survivors[self.max_size :]:
             dropped.append(hyp.hid)
             self.remove(hyp.hid)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import asdict, dataclass, field as dataclass_field
-from typing import Deque, Dict, Iterable, List, Optional
+from typing import Deque, Dict, List, Optional
 
 import numpy as np
 
@@ -16,13 +16,13 @@ __all__ = ["EpisodeRecord", "Telemetry", "FEATURE_NAMES"]
 _AGREEMENT_GAIN = 4.0
 
 FEATURE_NAMES = (
-    "coherence",       # +: field locks hard      -: field stays scattered
-    "decisiveness",    # +: clear winner          -: leaders stay tied
-    "depth",           # +: recursion used a lot  -: recursion barely needed
-    "veto_pressure",   # +: constraints firing    -: constraints quiet
+    "coherence",  # +: field locks hard      -: field stays scattered
+    "decisiveness",  # +: clear winner          -: leaders stay tied
+    "depth",  # +: recursion used a lot  -: recursion barely needed
+    "veto_pressure",  # +: constraints firing    -: constraints quiet
     "field_pressure",  # +: population crowded    -: population sparse
-    "reward",          # +: answers landing       -: answers missing
-    "scale_balance",   # +: only fine scales work -: only coarse scales work
+    "reward",  # +: answers landing       -: answers missing
+    "scale_balance",  # +: only fine scales work -: only coarse scales work
 )
 
 
@@ -48,8 +48,13 @@ class EpisodeRecord:
     reward: Optional[float] = None
     params: Dict[str, float] = dataclass_field(default_factory=dict)
 
-    def features(self, target_coherence: float = 0.75, target_decisiveness: float = 0.35,
-                 target_veto_rate: float = 0.1, reward_baseline: float = 0.5) -> np.ndarray:
+    def features(
+        self,
+        target_coherence: float = 0.75,
+        target_decisiveness: float = 0.35,
+        target_veto_rate: float = 0.1,
+        reward_baseline: float = 0.5,
+    ) -> np.ndarray:
         depth_saturation = self.depth_used / max(1, self.max_depth)
         veto_rate = self.vetoes / max(1, self.field_size)
         field_pressure = self.field_size / max(1, self.max_field_size)
@@ -64,9 +69,15 @@ class EpisodeRecord:
         if self.reward is None:
             balance = self.scale_balance
         else:
-            balance = float(np.clip(
-                _AGREEMENT_GAIN * self.scale_agreement * (2.0 * float(self.reward) - 1.0), -1.0, 1.0
-            ))
+            balance = float(
+                np.clip(
+                    _AGREEMENT_GAIN
+                    * self.scale_agreement
+                    * (2.0 * float(self.reward) - 1.0),
+                    -1.0,
+                    1.0,
+                )
+            )
         return np.array(
             [
                 self.coherence - target_coherence,
@@ -104,7 +115,9 @@ class Telemetry:
 
     def feature_matrix(self, count: int) -> np.ndarray:
         baseline = self.mean_reward(count * 4)
-        rows = [record.features(reward_baseline=baseline) for record in self.recent(count)]
+        rows = [
+            record.features(reward_baseline=baseline) for record in self.recent(count)
+        ]
         if not rows:
             return np.zeros((0, len(FEATURE_NAMES)))
         return np.stack(rows)

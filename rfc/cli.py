@@ -1,15 +1,15 @@
 """Command line interface for Resonant Fractal Cognition.
 
-    python -m rfc.cli demo
-    python -m rfc.cli bench --seed 0
-    python -m rfc.cli episode --seed 3 --steps 32
+python -m rfc.cli demo
+python -m rfc.cli bench --seed 0
+python -m rfc.cli episode --seed 3 --steps 32
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-from typing import List, Optional, Sequence
+from typing import Optional, Sequence
 
 from .constraints import forbidden_labels
 from .engine import RFCConfig, ResonantFractalCognition
@@ -30,15 +30,19 @@ def _episode(args: argparse.Namespace) -> int:
         reflect_every=args.reflect_every,
         params=OperatorParams(),
     )
-    mind = ResonantFractalCognition(config, codebook=dataset.codebook, invariants=invariants)
+    mind = ResonantFractalCognition(
+        config, codebook=dataset.codebook, invariants=invariants
+    )
     hits = 0
     for evidence, truth in dataset.samples:
         percept = mind.perceive(evidence)
         hits += percept.label == truth
         mind.learn(1.0 if percept.label == truth else 0.0)
         if args.verbose:
-            print(f"truth={truth} answer={percept.label} confidence={percept.confidence:.3f} "
-                  f"coherence={percept.coherence:.3f} depth={percept.depth_used}")
+            print(
+                f"truth={truth} answer={percept.label} confidence={percept.confidence:.3f} "
+                f"coherence={percept.coherence:.3f} depth={percept.depth_used}"
+            )
     print(f"accuracy {hits}/{len(dataset.samples)} = {hits / len(dataset.samples):.3f}")
     print(mind.explain(percept))
     if args.json:
@@ -49,11 +53,21 @@ def _episode(args: argparse.Namespace) -> int:
 def _bench(args: argparse.Namespace) -> int:
     results = run_benchmark(args.seed)
     if args.json:
-        print(json.dumps(
-            [{"task": r.task, "scores": r.scores, "detail": r.detail, "notes": r.notes} for r in results],
-            indent=2,
-            default=str,
-        ))
+        print(
+            json.dumps(
+                [
+                    {
+                        "task": r.task,
+                        "scores": r.scores,
+                        "detail": r.detail,
+                        "notes": r.notes,
+                    }
+                    for r in results
+                ],
+                indent=2,
+                default=str,
+            )
+        )
     else:
         print(format_report(results))
     return 0
@@ -67,7 +81,9 @@ def _demo(_args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="rfc", description="Resonant Fractal Cognition")
+    parser = argparse.ArgumentParser(
+        prog="rfc", description="Resonant Fractal Cognition"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     episode = sub.add_parser("episode", help="run episodes over the composite task")
@@ -76,7 +92,9 @@ def build_parser() -> argparse.ArgumentParser:
     episode.add_argument("--steps", type=int, default=24)
     episode.add_argument("--max-depth", type=int, default=2)
     episode.add_argument("--reflect-every", type=int, default=8)
-    episode.add_argument("--forbid", action="append", default=[], help="label the system may not answer")
+    episode.add_argument(
+        "--forbid", action="append", default=[], help="label the system may not answer"
+    )
     episode.add_argument("--verbose", action="store_true")
     episode.add_argument("--json", action="store_true")
     episode.set_defaults(func=_episode)

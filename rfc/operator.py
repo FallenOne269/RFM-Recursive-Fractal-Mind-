@@ -43,7 +43,12 @@ from .constraints import ConstraintField, ConstraintReport
 from .field import ResonantField
 from .scale_space import ScaleBand, band_matrix
 
-__all__ = ["OperatorParams", "StepReport", "ScaleInvariantOperator", "TUNABLE_PARAMETERS"]
+__all__ = [
+    "OperatorParams",
+    "StepReport",
+    "ScaleInvariantOperator",
+    "TUNABLE_PARAMETERS",
+]
 
 _EPS = 1e-12
 
@@ -88,7 +93,9 @@ class OperatorParams:
             if name not in TUNABLE_PARAMETERS:
                 raise KeyError(f"{name} is not a tunable parameter")
             low, high = TUNABLE_PARAMETERS[name]
-            updates[name] = float(np.clip(getattr(self, name) + float(delta), low, high))
+            updates[name] = float(
+                np.clip(getattr(self, name) + float(delta), low, high)
+            )
         return replace(self, **updates)
 
     def as_dict(self) -> Dict[str, float]:
@@ -133,7 +140,9 @@ class ScaleInvariantOperator:
         params = self.params
         items = field.ordered()
         if not items:
-            return StepReport(step_index, 0.0, 0.0, 0.0, [], ConstraintReport(), None, {})
+            return StepReport(
+                step_index, 0.0, 0.0, 0.0, [], ConstraintReport(), None, {}
+            )
 
         vectors = np.stack([h.vector for h in items])
         amplitudes = np.array([h.amplitude for h in items], dtype=float)
@@ -156,8 +165,8 @@ class ScaleInvariantOperator:
         band_phases = band_frequencies * float(time)
 
         # --- 1. drive -------------------------------------------------------
-        alignment = vectors @ directions.T                      # (n, L)
-        own_band = (scales[:, None] == band_levels[None, :])
+        alignment = vectors @ directions.T  # (n, L)
+        own_band = scales[:, None] == band_levels[None, :]
         gate = np.where(own_band, 1.0, params.cross_scale_leak)
         gain = gate * weights[None, :]
         lag = phases[:, None] - band_phases[None, :]
@@ -198,7 +207,9 @@ class ScaleInvariantOperator:
         overlap = vectors @ vectors.T
         np.fill_diagonal(overlap, 0.0)
         state = amplitudes * np.exp(1j * phases)
-        coupling_phase = params.coupling * np.imag(np.exp(-1j * phases) * (overlap @ state))
+        coupling_phase = params.coupling * np.imag(
+            np.exp(-1j * phases) * (overlap @ state)
+        )
         rivalry = np.maximum(overlap, 0.0)
         coupling_amp = -params.competition * (rivalry @ amplitudes)
 
@@ -222,7 +233,9 @@ class ScaleInvariantOperator:
         # hypothesis holds this nearly constant while its lab-frame phase keeps
         # turning, which is why every agreement measure is taken here.
         next_time = float(time) + params.dt
-        new_lags = (new_phases - self.natural_frequency_vector(scales) * next_time) % (2.0 * np.pi)
+        new_lags = (new_phases - self.natural_frequency_vector(scales) * next_time) % (
+            2.0 * np.pi
+        )
 
         for index, hypothesis in enumerate(items):
             hypothesis.amplitude = float(new_amplitudes[index])
@@ -231,17 +244,27 @@ class ScaleInvariantOperator:
             hypothesis.age += 1
 
         # --- 5. constraints, conservation, pruning --------------------------
-        report = constraints.apply(field, context) if constraints is not None else ConstraintReport()
+        report = (
+            constraints.apply(field, context)
+            if constraints is not None
+            else ConstraintReport()
+        )
         # Mass is conserved per scale, so no band can out-shout another, and
         # the energy cap catches anything the normaliser cannot (an empty or
         # degenerate scale group).
         field.normalize()
         field.limit_energy(params.energy_cap)
-        pruned = field.prune(params.prune_threshold) if step_index >= params.prune_after else []
+        pruned = (
+            field.prune(params.prune_threshold)
+            if step_index >= params.prune_after
+            else []
+        )
 
         drive_energy = float(np.sum(gain * support))
         active = field.active()
-        mean_amplitude = float(np.mean([h.amplitude for h in active])) if active else 0.0
+        mean_amplitude = (
+            float(np.mean([h.amplitude for h in active])) if active else 0.0
+        )
         leader = field.measure()
         return StepReport(
             step=step_index,

@@ -22,11 +22,16 @@ from rfc.tasks import make_composite, make_superposition
 
 def _codebook(count: int = 4, dim: int = 64, seed: int = 0):
     rng = np.random.default_rng(seed)
-    return {chr(ord("a") + index): normalize_vector(rng.normal(size=dim)) for index in range(count)}
+    return {
+        chr(ord("a") + index): normalize_vector(rng.normal(size=dim))
+        for index in range(count)
+    }
 
 
 def _mind(dim: int = 64, seed: int = 0, **kwargs) -> ResonantFractalCognition:
-    return ResonantFractalCognition(RFCConfig(dim=dim, seed=seed, **kwargs), codebook=_codebook(dim=dim))
+    return ResonantFractalCognition(
+        RFCConfig(dim=dim, seed=seed, **kwargs), codebook=_codebook(dim=dim)
+    )
 
 
 def test_perceive_recovers_the_generating_concept():
@@ -45,10 +50,12 @@ def test_identical_seeds_give_identical_episodes():
     runs = []
     for _ in range(2):
         mind = _mind()
-        runs.append([
-            (p.label, round(p.confidence, 9), round(p.coherence, 9), p.depth_used)
-            for p in (mind.perceive(sample) for sample in evidence)
-        ])
+        runs.append(
+            [
+                (p.label, round(p.confidence, 9), round(p.coherence, 9), p.depth_used)
+                for p in (mind.perceive(sample) for sample in evidence)
+            ]
+        )
     assert runs[0] == runs[1]
 
 
@@ -70,10 +77,12 @@ def test_evidence_of_the_wrong_size_is_rejected():
 
 def test_recursion_only_fires_when_the_field_cannot_choose():
     codebook = _codebook()
-    decisive = ResonantFractalCognition(RFCConfig(dim=64, seed=0, ambiguity_threshold=0.0),
-                                        codebook=codebook)
-    eager = ResonantFractalCognition(RFCConfig(dim=64, seed=0, ambiguity_threshold=1.0),
-                                     codebook=codebook)
+    decisive = ResonantFractalCognition(
+        RFCConfig(dim=64, seed=0, ambiguity_threshold=0.0), codebook=codebook
+    )
+    eager = ResonantFractalCognition(
+        RFCConfig(dim=64, seed=0, ambiguity_threshold=1.0), codebook=codebook
+    )
     evidence = codebook["a"] + codebook["b"]
     assert decisive.perceive(evidence).depth_used == 0
     assert eager.perceive(evidence).depth_used > 0
@@ -82,7 +91,8 @@ def test_recursion_only_fires_when_the_field_cannot_choose():
 def test_recursion_depth_is_capped():
     codebook = _codebook()
     mind = ResonantFractalCognition(
-        RFCConfig(dim=64, seed=0, ambiguity_threshold=1.0, max_depth=2), codebook=codebook
+        RFCConfig(dim=64, seed=0, ambiguity_threshold=1.0, max_depth=2),
+        codebook=codebook,
     )
     percept = mind.perceive(codebook["a"] + codebook["b"] + codebook["c"])
     assert percept.depth_used <= 2
@@ -90,7 +100,9 @@ def test_recursion_depth_is_capped():
 
 def test_decompose_names_both_sources():
     dataset = make_superposition(1, trials=12)
-    mind = ResonantFractalCognition(RFCConfig(dim=dataset.dim, seed=1), codebook=dataset.codebook)
+    mind = ResonantFractalCognition(
+        RFCConfig(dim=dataset.dim, seed=1), codebook=dataset.codebook
+    )
     hits = 0
     for (evidence, _), pair in zip(dataset.samples, dataset.extra["pairs"]):
         hits += frozenset(mind.decompose(evidence, 2)) == frozenset(pair)
@@ -106,7 +118,9 @@ def test_decompose_does_not_repeat_itself():
 
 def test_symbols_crystallise_and_carry_provenance():
     dataset = make_composite(0, trials=12)
-    mind = ResonantFractalCognition(RFCConfig(dim=dataset.dim, seed=0), codebook=dataset.codebook)
+    mind = ResonantFractalCognition(
+        RFCConfig(dim=dataset.dim, seed=0), codebook=dataset.codebook
+    )
     for evidence, _ in dataset.samples:
         mind.perceive(evidence)
     assert mind.lattice.symbols
@@ -119,7 +133,9 @@ def test_symbols_crystallise_and_carry_provenance():
 
 def test_one_symbol_per_claim():
     dataset = make_composite(0, trials=20)
-    mind = ResonantFractalCognition(RFCConfig(dim=dataset.dim, seed=0), codebook=dataset.codebook)
+    mind = ResonantFractalCognition(
+        RFCConfig(dim=dataset.dim, seed=0), codebook=dataset.codebook
+    )
     for evidence, _ in dataset.samples:
         mind.perceive(evidence)
     labels = [symbol.label for symbol in mind.lattice.symbols.values()]
@@ -128,13 +144,14 @@ def test_one_symbol_per_claim():
 
 def test_unsupported_symbols_dissolve():
     dataset = make_composite(0, trials=6)
-    config = RFCConfig(dim=dataset.dim, seed=0,
-                       lattice=LatticeConfig(decay=0.5, dissolve_strength=0.5))
+    config = RFCConfig(
+        dim=dataset.dim, seed=0, lattice=LatticeConfig(decay=0.5, dissolve_strength=0.5)
+    )
     mind = ResonantFractalCognition(config, codebook=dataset.codebook)
     for evidence, _ in dataset.samples:
         mind.perceive(evidence)
     before = len(mind.lattice.symbols)
-    mind.lattice.decay(step=10 ** 6)
+    mind.lattice.decay(step=10**6)
     assert len(mind.lattice.symbols) < before or before == 0
 
 
@@ -169,14 +186,20 @@ def test_veto_makes_amplitude_non_increasing():
 
     from rfc.constraints import ConstraintField
 
-    constraints = ConstraintField([forbidden_labels("banned", ["banned"], severity=0.5)])
+    constraints = ConstraintField(
+        [forbidden_labels("banned", ["banned"], severity=0.5)]
+    )
     operator = ScaleInvariantOperator()
     history = [banned.amplitude]
     for index in range(20):
-        operator.step(field, bands, time=index * 0.35, step_index=index, constraints=constraints)
+        operator.step(
+            field, bands, time=index * 0.35, step_index=index, constraints=constraints
+        )
         history.append(banned.amplitude)
     assert banned.vetoed
-    assert all(later <= earlier + 1e-12 for earlier, later in zip(history[1:], history[2:]))
+    assert all(
+        later <= earlier + 1e-12 for earlier, later in zip(history[1:], history[2:])
+    )
     assert field.measure().label != "banned"
 
 
@@ -195,9 +218,12 @@ def test_invariants_can_read_the_context():
     codebook = _codebook()
     invariant = Invariant(
         name="context_gate",
-        predicate=lambda hypothesis, context: context.get("mode") == "strict" and hypothesis.label == "b",
+        predicate=lambda hypothesis, context: context.get("mode") == "strict"
+        and hypothesis.label == "b",
     )
-    mind = ResonantFractalCognition(RFCConfig(dim=64, seed=0), codebook=codebook, invariants=[invariant])
+    mind = ResonantFractalCognition(
+        RFCConfig(dim=64, seed=0), codebook=codebook, invariants=[invariant]
+    )
     assert mind.perceive(codebook["b"], context={"mode": "strict"}).label != "b"
     assert mind.perceive(codebook["b"], context={"mode": "open"}).label == "b"
 
@@ -223,8 +249,12 @@ def test_reflection_only_moves_tunable_parameters_and_stays_bounded():
 def test_reflection_rolls_back_when_reward_collapses():
     dataset = make_composite(0, trials=40)
     mind = ResonantFractalCognition(
-        RFCConfig(dim=dataset.dim, seed=0, reflect_every=8,
-                  meta=MetaConfig(window=8, min_episodes=8, expectation_decay=0.0)),
+        RFCConfig(
+            dim=dataset.dim,
+            seed=0,
+            reflect_every=8,
+            meta=MetaConfig(window=8, min_episodes=8, expectation_decay=0.0),
+        ),
         codebook=dataset.codebook,
     )
     for index, (evidence, _) in enumerate(dataset.samples):
@@ -260,4 +290,11 @@ def test_state_is_serialisable_and_complete():
     mind.perceive(np.random.default_rng(0).normal(size=64))
     state = mind.state()
     assert state["episodes"] == 1
-    assert set(state) == {"episodes", "params", "lattice", "telemetry", "concepts", "invariants"}
+    assert set(state) == {
+        "episodes",
+        "params",
+        "lattice",
+        "telemetry",
+        "concepts",
+        "invariants",
+    }

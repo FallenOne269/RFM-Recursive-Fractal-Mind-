@@ -19,7 +19,7 @@ Two guardrails keep this from being a self-amplifying loop:
 from __future__ import annotations
 
 from dataclasses import dataclass, field as dataclass_field
-from typing import Dict, List, Mapping, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -28,7 +28,13 @@ from .operator import OperatorParams, ScaleInvariantOperator
 from .scale_space import temporal_bands
 from .telemetry import FEATURE_NAMES, Telemetry
 
-__all__ = ["MetaPolicy", "MetaConfig", "MetaReport", "MetaResonator", "DEFAULT_POLICIES"]
+__all__ = [
+    "MetaPolicy",
+    "MetaConfig",
+    "MetaReport",
+    "MetaResonator",
+    "DEFAULT_POLICIES",
+]
 
 
 @dataclass(frozen=True)
@@ -150,8 +156,11 @@ class MetaReport:
 class MetaResonator:
     """Runs ``Psi`` over the system's own telemetry to retune ``Psi``."""
 
-    def __init__(self, config: Optional[MetaConfig] = None,
-                 policies: Optional[Tuple[MetaPolicy, ...]] = None):
+    def __init__(
+        self,
+        config: Optional[MetaConfig] = None,
+        policies: Optional[Tuple[MetaPolicy, ...]] = None,
+    ):
         self.config = config or MetaConfig()
         self.policies = tuple(policies or DEFAULT_POLICIES)
         self.best_params: Optional[OperatorParams] = None
@@ -188,36 +197,58 @@ class MetaResonator:
             reason="exploration",
         )
 
-    # ------------------------------------------------------------------ logic
-    def reflect(self, telemetry: Telemetry, operator: ScaleInvariantOperator) -> MetaReport:
-        config = self.config
-        if len(telemetry) < config.min_episodes:
-            return MetaReport(reason="not enough history", params=operator.params.as_dict())
+    def _check_rollback(
+        self, operator: ScaleInvariantOperator, reward: float
+    ) -> Optional[MetaReport]:
+        """Restore the best-known parameters when reward has fallen away.
 
-        reward = telemetry.mean_reward(config.window)
-        # The yardstick decays.  A high-water mark set before a regime change is
-        # unreachable afterwards, and comparing against it forever would make
-        # the system roll back every single reflection and never adapt again --
-        # which is exactly what an undecayed best-ever baseline does.
+        The yardstick decays.  A high-water mark set before a regime change is
+        unreachable afterwards, and comparing against it forever would make the
+        system roll back at every reflection and never adapt again -- which is
+        exactly what an undecayed best-ever baseline does.
+        """
+
+        config = self.config
         if self.best_params is not None:
             self.best_reward -= config.expectation_decay
         if self.best_params is None or reward > self.best_reward:
             self.best_params, self.best_reward = operator.params, reward
-        elif reward < self.best_reward - config.rollback_tolerance:
-            operator.params = self.best_params
-            report = MetaReport(
-                rolled_back=True,
-                reason=f"reward {reward:.3f} fell below best {self.best_reward:.3f}",
-                params=operator.params.as_dict(),
+            return None
+        if reward >= self.best_reward - config.rollback_tolerance:
+            return None
+        operator.params = self.best_params
+        return MetaReport(
+            rolled_back=True,
+            reason=f"reward {reward:.3f} fell below best {self.best_reward:.3f}",
+            params=operator.params.as_dict(),
+        )
+
+    # ------------------------------------------------------------------ logic
+    def reflect(
+        self, telemetry: Telemetry, operator: ScaleInvariantOperator
+    ) -> MetaReport:
+        config = self.config
+        if len(telemetry) < config.min_episodes:
+            return MetaReport(
+                reason="not enough history", params=operator.params.as_dict()
             )
-            self.history.append(report)
-            return report
+
+        reward = telemetry.mean_reward(config.window)
+        rollback = self._check_rollback(operator, reward)
+        if rollback is not None:
+            self.history.append(rollback)
+            return rollback
 
         features = telemetry.feature_matrix(config.window)
         if features.shape[0] < 2:
-            return MetaReport(reason="not enough history", params=operator.params.as_dict())
+            return MetaReport(
+                reason="not enough history", params=operator.params.as_dict()
+            )
 
-        bands = temporal_bands(features, min(config.time_levels, max(1, int(np.log2(features.shape[0])) + 1)))
+        bands = temporal_bands(
+            features,
+            min(config.time_levels, max(1, int(np.log2(features.shape[0])) + 1)),
+        )
         field = ResonantField(dim=len(FEATURE_NAMES), max_size=4 * len(self.policies))
         for policy in self.policies:
             for band in bands:
@@ -234,9 +265,13 @@ class MetaResonator:
         operator.run(field, bands, config.steps)
         distribution = field.label_distribution()
         if not distribution:
-            return MetaReport(reason="no policy resonated", params=operator.params.as_dict())
+            return MetaReport(
+                reason="no policy resonated", params=operator.params.as_dict()
+            )
 
-        name, confidence = max(distribution.items(), key=lambda item: (item[1], item[0]))
+        name, confidence = max(
+            distribution.items(), key=lambda item: (item[1], item[0])
+        )
         policy = next(p for p in self.policies if p.name == name)
         report = MetaReport(
             applied=None,
@@ -246,7 +281,9 @@ class MetaResonator:
             distribution={key: float(value) for key, value in distribution.items()},
         )
         under_performing = reward < self.best_reward - config.expectation_decay
-        if confidence < config.min_confidence or (not policy.deltas and under_performing):
+        if confidence < config.min_confidence or (
+            not policy.deltas and under_performing
+        ):
             if config.exploration > 0.0 and under_performing:
                 probe = self._probe(operator, reward)
                 probe.distribution = report.distribution

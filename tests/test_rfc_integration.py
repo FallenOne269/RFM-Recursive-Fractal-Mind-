@@ -24,7 +24,9 @@ from rfc.tasks import (
 
 def test_rfai_motifs_become_evidence_vectors():
     encoder = DynamicFractalEncoder()
-    vector = encode_evidence({"payload": 3}, encoder, np.array([0.4, 0.1, 0.9]), {"load": 0.2}, dim=32)
+    vector = encode_evidence(
+        {"payload": 3}, encoder, np.array([0.4, 0.1, 0.9]), {"load": 0.2}, dim=32
+    )
     assert vector.shape == (32,)
     assert np.linalg.norm(vector) == pytest.approx(1.0)
 
@@ -41,8 +43,9 @@ def test_a_semantic_goal_becomes_an_enforced_invariant():
     wanted = rng.normal(size=dim)
     codebook = {"aligned": wanted, "opposed": -wanted, "other": rng.normal(size=dim)}
     invariant = goal_alignment_invariant(SemanticGoal(wanted), dim, min_similarity=-0.5)
-    mind = ResonantFractalCognition(RFCConfig(dim=dim, seed=0), codebook=codebook,
-                                    invariants=[invariant])
+    mind = ResonantFractalCognition(
+        RFCConfig(dim=dim, seed=0), codebook=codebook, invariants=[invariant]
+    )
     percept = mind.perceive(-wanted / np.linalg.norm(wanted))
     assert percept.label != "opposed"
     assert any(reason == "goal_alignment" for _, reason in percept.vetoed)
@@ -107,7 +110,20 @@ def test_cli_emits_json(capsys):
 def test_cli_can_forbid_an_answer(capsys):
     dataset = make_composite(0, trials=1)
     banned = sorted(dataset.codebook)[0]
-    assert cli_main(["episode", "--seed", "0", "--episodes", "6", "--forbid", banned,
-                     "--verbose"]) == 0
+    assert (
+        cli_main(
+            [
+                "episode",
+                "--seed",
+                "0",
+                "--episodes",
+                "6",
+                "--forbid",
+                banned,
+                "--verbose",
+            ]
+        )
+        == 0
+    )
     output = capsys.readouterr().out
     assert f"answer={banned} " not in output

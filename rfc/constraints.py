@@ -21,7 +21,14 @@ import numpy as np
 
 from .field import Hypothesis, ResonantField, normalize_vector
 
-__all__ = ["Invariant", "Violation", "ConstraintReport", "ConstraintField", "forbidden_direction", "forbidden_labels"]
+__all__ = [
+    "Invariant",
+    "Violation",
+    "ConstraintReport",
+    "ConstraintField",
+    "forbidden_direction",
+    "forbidden_labels",
+]
 
 
 @dataclass
@@ -42,7 +49,9 @@ class Invariant:
     def __post_init__(self) -> None:
         self.severity = float(np.clip(self.severity, 1e-3, 1.0))
 
-    def violated_by(self, hypothesis: Hypothesis, context: Mapping[str, object]) -> bool:
+    def violated_by(
+        self, hypothesis: Hypothesis, context: Mapping[str, object]
+    ) -> bool:
         return bool(self.predicate(hypothesis, context))
 
 
@@ -77,7 +86,9 @@ class ConstraintField:
     def add(self, invariant: Invariant) -> None:
         self.invariants.append(invariant)
 
-    def apply(self, field: ResonantField, context: Optional[Mapping[str, object]] = None) -> ConstraintReport:
+    def apply(
+        self, field: ResonantField, context: Optional[Mapping[str, object]] = None
+    ) -> ConstraintReport:
         report = ConstraintReport()
         if not self.invariants:
             return report
@@ -86,7 +97,9 @@ class ConstraintField:
             for invariant in self.invariants:
                 if not invariant.violated_by(hypothesis, ctx):
                     continue
-                report.violations.append(Violation(hypothesis.hid, invariant.name, invariant.severity))
+                report.violations.append(
+                    Violation(hypothesis.hid, invariant.name, invariant.severity)
+                )
                 if not hypothesis.vetoed:
                     # Phase inversion: from here on the hypothesis subtracts
                     # from any coalition that tries to absorb it.
@@ -98,8 +111,13 @@ class ConstraintField:
         return report
 
 
-def forbidden_direction(name: str, vector: Sequence[float] | np.ndarray, threshold: float = 0.75,
-                        severity: float = 1.0, description: str = "") -> Invariant:
+def forbidden_direction(
+    name: str,
+    vector: Sequence[float] | np.ndarray,
+    threshold: float = 0.75,
+    severity: float = 1.0,
+    description: str = "",
+) -> Invariant:
     """Veto any hypothesis pointing too close to a forbidden direction."""
 
     target = normalize_vector(vector)
@@ -110,11 +128,14 @@ def forbidden_direction(name: str, vector: Sequence[float] | np.ndarray, thresho
             return False
         return float(np.dot(normalize_vector(claim), target)) >= threshold
 
-    return Invariant(name=name, predicate=predicate, severity=severity, description=description)
+    return Invariant(
+        name=name, predicate=predicate, severity=severity, description=description
+    )
 
 
-def forbidden_labels(name: str, labels: Sequence[str], severity: float = 1.0,
-                     description: str = "") -> Invariant:
+def forbidden_labels(
+    name: str, labels: Sequence[str], severity: float = 1.0, description: str = ""
+) -> Invariant:
     """Veto hypotheses carrying one of ``labels``."""
 
     banned = set(labels)
@@ -122,4 +143,6 @@ def forbidden_labels(name: str, labels: Sequence[str], severity: float = 1.0,
     def predicate(hypothesis: Hypothesis, _context: Mapping[str, object]) -> bool:
         return hypothesis.label in banned
 
-    return Invariant(name=name, predicate=predicate, severity=severity, description=description)
+    return Invariant(
+        name=name, predicate=predicate, severity=severity, description=description
+    )

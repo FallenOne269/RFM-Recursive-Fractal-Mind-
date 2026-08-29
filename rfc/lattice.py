@@ -15,7 +15,7 @@ can be traced back to the evidence that crystallised it.
 from __future__ import annotations
 
 from dataclasses import dataclass, field as dataclass_field
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional
 
 import numpy as np
 
@@ -123,7 +123,9 @@ class SymbolLattice:
         config = self.config
         existing = self._find_existing(coalition)
         if existing is not None:
-            existing.strength = float(min(1.5, existing.strength + 0.1 * coalition.amplitude))
+            existing.strength = float(
+                min(1.5, existing.strength + 0.1 * coalition.amplitude)
+            )
             existing.last_seen_step = step
             existing.observations += 1
             existing.support = list(coalition.members)
@@ -158,7 +160,9 @@ class SymbolLattice:
             if other.sid == symbol.sid:
                 continue
             score = other.similarity(symbol.vector)
-            if score > best_score or (score == best_score and best is not None and other.sid < best.sid):
+            if score > best_score or (
+                score == best_score and best is not None and other.sid < best.sid
+            ):
                 best, best_score = other, score
         if best is not None:
             symbol.parent = best.sid
@@ -223,7 +227,11 @@ class SymbolLattice:
 
         lines: List[str] = []
         for symbol in sorted(self.symbols.values(), key=lambda s: s.sid):
-            parent = f" < {self.symbols[symbol.parent].label}" if symbol.parent in self.symbols else ""
+            parent = (
+                f" < {self.symbols[symbol.parent].label}"
+                if symbol.parent in self.symbols
+                else ""
+            )
             scales = ",".join(str(s) for s in symbol.scales)
             lines.append(
                 f"{symbol.sid}: {symbol.label}{parent} "

@@ -84,9 +84,15 @@ def _detail_pattern(rng: np.random.Generator, dim: int) -> np.ndarray:
 
 
 # -------------------------------------------------------------------- datasets
-def make_composite(seed: int = 0, trials: int = 90, dim: int = DIM,
-                   families: int = 2, variants: int = 3,
-                   detail_weight: float = 0.35, noise: float = 0.12) -> Dataset:
+def make_composite(
+    seed: int = 0,
+    trials: int = 90,
+    dim: int = DIM,
+    families: int = 2,
+    variants: int = 3,
+    detail_weight: float = 0.35,
+    noise: float = 0.12,
+) -> Dataset:
     """Plain classification, where class identity is a conjunction.
 
     Each class is a loud family pattern plus a quiet variant cue, so the
@@ -96,15 +102,22 @@ def make_composite(seed: int = 0, trials: int = 90, dim: int = DIM,
     """
 
     rng = np.random.default_rng(seed)
-    family_patterns = [_smooth_pattern(rng, dim, cycles=1.0 + index) for index in range(families)]
+    family_patterns = [
+        _smooth_pattern(rng, dim, cycles=1.0 + index) for index in range(families)
+    ]
     variant_patterns = [_detail_pattern(rng, dim) for _ in range(variants)]
     codebook: Dict[str, np.ndarray] = {}
     for f_index, family in enumerate(family_patterns):
         for v_index, variant in enumerate(variant_patterns):
-            codebook[f"f{f_index}v{v_index}"] = normalize_vector(family + detail_weight * variant)
+            codebook[f"f{f_index}v{v_index}"] = normalize_vector(
+                family + detail_weight * variant
+            )
     labels = sorted(codebook)
     samples = [
-        (codebook[labels[index % len(labels)]] + noise * rng.normal(size=dim), labels[index % len(labels)])
+        (
+            codebook[labels[index % len(labels)]] + noise * rng.normal(size=dim),
+            labels[index % len(labels)],
+        )
         for index in range(trials)
     ]
     return Dataset(
@@ -116,8 +129,14 @@ def make_composite(seed: int = 0, trials: int = 90, dim: int = DIM,
     )
 
 
-def make_superposition(seed: int = 1, trials: int = 60, dim: int = DIM,
-                       concepts: int = 10, shared: float = 2.0, noise: float = 0.3) -> Dataset:
+def make_superposition(
+    seed: int = 1,
+    trials: int = 60,
+    dim: int = DIM,
+    concepts: int = 10,
+    shared: float = 2.0,
+    noise: float = 0.3,
+) -> Dataset:
     """Two sources at once, over a codebook whose concepts all resemble each other.
 
     Because every concept shares a component with every other, whatever
@@ -141,7 +160,9 @@ def make_superposition(seed: int = 1, trials: int = 60, dim: int = DIM,
         second = labels[(index + 1 + index // len(labels)) % len(labels)]
         if second == first:
             second = labels[(index + 2) % len(labels)]
-        samples.append((codebook[first] + codebook[second] + noise * rng.normal(size=dim), first))
+        samples.append(
+            (codebook[first] + codebook[second] + noise * rng.normal(size=dim), first)
+        )
         pairs.append((first, second))
     return Dataset(
         name="superposition",
@@ -153,8 +174,13 @@ def make_superposition(seed: int = 1, trials: int = 60, dim: int = DIM,
     )
 
 
-def make_stream(seed: int = 4, trials: int = 180, dim: int = DIM, noise: float = 0.2,
-                skew: float = 0.7) -> Dataset:
+def make_stream(
+    seed: int = 4,
+    trials: int = 180,
+    dim: int = DIM,
+    noise: float = 0.2,
+    skew: float = 0.7,
+) -> Dataset:
     """A skewed stream: a couple of classes dominate, the rest are occasional.
 
     A balanced stream is the one setting where consolidation *cannot* help --
@@ -184,8 +210,13 @@ def make_stream(seed: int = 4, trials: int = 180, dim: int = DIM, noise: float =
     )
 
 
-def make_drift(seed: int = 2, trials: int = 160, dim: int = DIM,
-               noise: float = 0.15, interference: float = 4.0) -> Dataset:
+def make_drift(
+    seed: int = 2,
+    trials: int = 160,
+    dim: int = DIM,
+    noise: float = 0.15,
+    interference: float = 4.0,
+) -> Dataset:
     """Halfway through the stream, the coarse scales stop being trustworthy.
 
     Strong low-frequency interference swamps the coarse bands; the fine detail
@@ -199,7 +230,8 @@ def make_drift(seed: int = 2, trials: int = 160, dim: int = DIM,
     rng = np.random.default_rng(seed)
     codebook = {
         f"r{index}": normalize_vector(
-            _smooth_pattern(rng, dim, cycles=1.0 + index * 0.7) + 0.8 * _detail_pattern(rng, dim)
+            _smooth_pattern(rng, dim, cycles=1.0 + index * 0.7)
+            + 0.8 * _detail_pattern(rng, dim)
         )
         for index in range(4)
     }
@@ -228,13 +260,20 @@ def make_drift(seed: int = 2, trials: int = 160, dim: int = DIM,
     )
 
 
-def make_safety(seed: int = 3, trials: int = 40, dim: int = DIM, noise: float = 0.2) -> Dataset:
+def make_safety(
+    seed: int = 3, trials: int = 40, dim: int = DIM, noise: float = 0.2
+) -> Dataset:
     """Every sample is drawn from the one class the system may not output."""
 
     rng = np.random.default_rng(seed)
-    codebook = {name: normalize_vector(rng.normal(size=dim))
-                for name in ("safe_a", "safe_b", "forbidden")}
-    samples = [(codebook["forbidden"] + noise * rng.normal(size=dim), "forbidden") for _ in range(trials)]
+    codebook = {
+        name: normalize_vector(rng.normal(size=dim))
+        for name in ("safe_a", "safe_b", "forbidden")
+    }
+    samples = [
+        (codebook["forbidden"] + noise * rng.normal(size=dim), "forbidden")
+        for _ in range(trials)
+    ]
     return Dataset(
         name="safety",
         dim=dim,
@@ -252,7 +291,9 @@ class FlatMatcher:
 
     def __init__(self, codebook: Dict[str, np.ndarray]):
         self.labels = sorted(codebook)
-        self.matrix = np.stack([normalize_vector(codebook[label]) for label in self.labels])
+        self.matrix = np.stack(
+            [normalize_vector(codebook[label]) for label in self.labels]
+        )
 
     def scores(self, evidence: np.ndarray) -> np.ndarray:
         return self.matrix @ normalize_vector(evidence)
@@ -270,21 +311,31 @@ class BandMatcher:
 
     name = "band-cosine"
 
-    def __init__(self, codebook: Dict[str, np.ndarray], levels: int = LEVELS,
-                 equalization: float = 0.25):
+    def __init__(
+        self,
+        codebook: Dict[str, np.ndarray],
+        levels: int = LEVELS,
+        equalization: float = 0.25,
+    ):
         self.labels = sorted(codebook)
         self.levels = levels
         self.equalization = equalization
         self.prototypes = {
-            label: np.stack([band.unit() for band in dyadic_decompose(codebook[label], levels)])
+            label: np.stack(
+                [band.unit() for band in dyadic_decompose(codebook[label], levels)]
+            )
             for label in self.labels
         }
 
     def predict(self, evidence: np.ndarray) -> str:
-        directions, weights = band_matrix(dyadic_decompose(evidence, self.levels), self.equalization)
+        directions, weights = band_matrix(
+            dyadic_decompose(evidence, self.levels), self.equalization
+        )
         best_label, best_score = self.labels[0], -np.inf
         for label in self.labels:
-            score = float(np.sum(weights * np.sum(self.prototypes[label] * directions, axis=1)))
+            score = float(
+                np.sum(weights * np.sum(self.prototypes[label] * directions, axis=1))
+            )
             if score > best_score:
                 best_label, best_score = label, score
         return best_label
@@ -302,7 +353,9 @@ class GreedyPursuit:
 
     def __init__(self, codebook: Dict[str, np.ndarray]):
         self.labels = sorted(codebook)
-        self.matrix = np.stack([normalize_vector(codebook[label]) for label in self.labels])
+        self.matrix = np.stack(
+            [normalize_vector(codebook[label]) for label in self.labels]
+        )
 
     def predict_top(self, evidence: np.ndarray, count: int = 2) -> List[str]:
         residual = np.asarray(evidence, dtype=float).copy()
@@ -313,7 +366,9 @@ class GreedyPursuit:
                 label = self.labels[int(index)]
                 if label not in chosen:
                     chosen.append(label)
-                    residual = residual - float(scores[int(index)]) * self.matrix[int(index)]
+                    residual = (
+                        residual - float(scores[int(index)]) * self.matrix[int(index)]
+                    )
                     break
         return chosen
 
@@ -327,9 +382,13 @@ class TaskResult:
     notes: str = ""
 
 
-def _build_mind(dataset: Dataset, seed: int, reflect_every: int = 0,
-                overrides: Optional[Dict[str, float]] = None,
-                invariants=None) -> ResonantFractalCognition:
+def _build_mind(
+    dataset: Dataset,
+    seed: int,
+    reflect_every: int = 0,
+    overrides: Optional[Dict[str, float]] = None,
+    invariants=None,
+) -> ResonantFractalCognition:
     config = RFCConfig(
         dim=dataset.dim,
         levels=LEVELS,
@@ -339,7 +398,9 @@ def _build_mind(dataset: Dataset, seed: int, reflect_every: int = 0,
         seed=seed,
         params=OperatorParams(**(overrides or {})),
     )
-    return ResonantFractalCognition(config, codebook=dataset.codebook, invariants=invariants)
+    return ResonantFractalCognition(
+        config, codebook=dataset.codebook, invariants=invariants
+    )
 
 
 def _accuracy(predictions: Sequence[str], truths: Sequence[str]) -> float:
@@ -363,7 +424,9 @@ def run_composite(seed: int = 0) -> TaskResult:
     scores = evaluate_baselines(dataset)
     mind = _build_mind(dataset, seed)
     truths = [label for _, label in dataset.samples]
-    scores["rfc"] = _accuracy([mind.perceive(evidence).label for evidence, _ in dataset.samples], truths)
+    scores["rfc"] = _accuracy(
+        [mind.perceive(evidence).label for evidence, _ in dataset.samples], truths
+    )
     return TaskResult(
         task="composite",
         scores=scores,
@@ -379,18 +442,26 @@ def run_superposition(seed: int = 1) -> TaskResult:
     flat = FlatMatcher(dataset.codebook)
     pursuit = GreedyPursuit(dataset.codebook)
     predictions: Dict[str, List[frozenset]] = {
-        "flat-cosine-top2": [frozenset(flat.predict_top(e, 2)) for e, _ in dataset.samples],
-        "greedy-pursuit": [frozenset(pursuit.predict_top(e, 2)) for e, _ in dataset.samples],
+        "flat-cosine-top2": [
+            frozenset(flat.predict_top(e, 2)) for e, _ in dataset.samples
+        ],
+        "greedy-pursuit": [
+            frozenset(pursuit.predict_top(e, 2)) for e, _ in dataset.samples
+        ],
     }
 
     mind = _build_mind(dataset, seed)
-    predictions["rfc-decompose"] = [frozenset(mind.decompose(e, 2)) for e, _ in dataset.samples]
+    predictions["rfc-decompose"] = [
+        frozenset(mind.decompose(e, 2)) for e, _ in dataset.samples
+    ]
 
     shallow = _build_mind(dataset, seed)
     one_shot: List[frozenset] = []
     for evidence, _ in dataset.samples:
-        ranked = sorted(shallow.perceive(evidence).alternatives.items(),
-                        key=lambda item: (-item[1], item[0]))[:2]
+        ranked = sorted(
+            shallow.perceive(evidence).alternatives.items(),
+            key=lambda item: (-item[1], item[0]),
+        )[:2]
         one_shot.append(frozenset(name for name, _ in ranked))
     predictions["rfc-one-shot-top2"] = one_shot
 
@@ -400,11 +471,15 @@ def run_superposition(seed: int = 1) -> TaskResult:
     }
     detail = {
         "member_recall": {
-            name: round(float(np.mean([len(p & t) / 2.0 for p, t in zip(sets, truth_sets)])), 3)
+            name: round(
+                float(np.mean([len(p & t) / 2.0 for p, t in zip(sets, truth_sets)])), 3
+            )
             for name, sets in predictions.items()
         }
     }
-    return TaskResult(task="superposition", scores=scores, detail=detail, notes=dataset.notes)
+    return TaskResult(
+        task="superposition", scores=scores, detail=detail, notes=dataset.notes
+    )
 
 
 def run_stream(seed: int = 4) -> TaskResult:
@@ -417,22 +492,33 @@ def run_stream(seed: int = 4) -> TaskResult:
     def split(hits: Sequence[bool]) -> Tuple[float, float]:
         common = [hit for hit, truth in zip(hits, truths) if truth in frequent]
         uncommon = [hit for hit, truth in zip(hits, truths) if truth not in frequent]
-        return (float(np.mean(common)) if common else 0.0,
-                float(np.mean(uncommon)) if uncommon else 0.0)
+        return (
+            float(np.mean(common)) if common else 0.0,
+            float(np.mean(uncommon)) if uncommon else 0.0,
+        )
 
-    for name, matcher in (("flat-cosine", FlatMatcher(dataset.codebook)),
-                          ("band-cosine", BandMatcher(dataset.codebook))):
-        hits = [matcher.predict(evidence) == truth for evidence, truth in dataset.samples]
+    for name, matcher in (
+        ("flat-cosine", FlatMatcher(dataset.codebook)),
+        ("band-cosine", BandMatcher(dataset.codebook)),
+    ):
+        hits = [
+            matcher.predict(evidence) == truth for evidence, truth in dataset.samples
+        ]
         scores[f"{name}-frequent"], scores[f"{name}-rare"] = split(hits)
 
     for name, overrides in (("rfc", {}), ("rfc-no-lattice", {"prior_gain": 0.0})):
         mind = _build_mind(dataset, seed, overrides=overrides)
-        hits = [mind.perceive(evidence).label == truth for evidence, truth in dataset.samples]
+        hits = [
+            mind.perceive(evidence).label == truth
+            for evidence, truth in dataset.samples
+        ]
         scores[name] = float(np.mean(hits))
         scores[f"{name}-frequent"], scores[f"{name}-rare"] = split(hits)
         if not overrides:
             detail["symbols"] = len(mind.lattice.symbols)
-            detail["symbol_labels"] = sorted({s.label for s in mind.lattice.symbols.values()})
+            detail["symbol_labels"] = sorted(
+                {s.label for s in mind.lattice.symbols.values()}
+            )
 
     return TaskResult(task="stream", scores=scores, detail=detail, notes=dataset.notes)
 
@@ -456,13 +542,19 @@ def run_drift(seed: int = 0, seeds: int = 6) -> TaskResult:
         dataset = make_drift(current)
         notes = dataset.notes
         shift = int(dataset.extra["shift"])  # type: ignore[arg-type]
-        truths = [label for _, label in dataset.samples]
 
-        for name, matcher in (("flat-cosine", FlatMatcher(dataset.codebook)),
-                              ("band-cosine", BandMatcher(dataset.codebook))):
-            hits = [matcher.predict(evidence) == truth for evidence, truth in dataset.samples]
+        for name, matcher in (
+            ("flat-cosine", FlatMatcher(dataset.codebook)),
+            ("band-cosine", BandMatcher(dataset.codebook)),
+        ):
+            hits = [
+                matcher.predict(evidence) == truth
+                for evidence, truth in dataset.samples
+            ]
             aggregate.setdefault(name, []).append(float(np.mean(hits)))
-            aggregate.setdefault(f"{name}-post-shift", []).append(float(np.mean(hits[shift:])))
+            aggregate.setdefault(f"{name}-post-shift", []).append(
+                float(np.mean(hits[shift:]))
+            )
 
         for name, reflect_every in (("rfc-no-metacognition", 0), ("rfc", 8)):
             mind = _build_mind(dataset, current, reflect_every=reflect_every)
@@ -472,7 +564,9 @@ def run_drift(seed: int = 0, seeds: int = 6) -> TaskResult:
                 hits.append(percept.label == truth)
                 mind.learn(1.0 if hits[-1] else 0.0)
             aggregate.setdefault(name, []).append(float(np.mean(hits)))
-            aggregate.setdefault(f"{name}-post-shift", []).append(float(np.mean(hits[shift:])))
+            aggregate.setdefault(f"{name}-post-shift", []).append(
+                float(np.mean(hits[shift:]))
+            )
             if reflect_every:
                 tilts.append(mind.operator.params.band_tilt)
                 detail.setdefault("policies", []).append(  # type: ignore[union-attr]
@@ -490,20 +584,28 @@ def run_drift(seed: int = 0, seeds: int = 6) -> TaskResult:
 
 def run_safety(seed: int = 3) -> TaskResult:
     dataset = make_safety(seed)
-    invariant = forbidden_labels("forbidden_class", ["forbidden"],
-                                 description="never output the forbidden class")
+    invariant = forbidden_labels(
+        "forbidden_class", ["forbidden"], description="never output the forbidden class"
+    )
     guarded = _build_mind(dataset, seed, invariants=[invariant])
     percepts = [guarded.perceive(evidence) for evidence, _ in dataset.samples]
     unguarded = _build_mind(dataset, seed)
-    unguarded_hits = [unguarded.perceive(evidence).label == "forbidden" for evidence, _ in dataset.samples]
+    unguarded_hits = [
+        unguarded.perceive(evidence).label == "forbidden"
+        for evidence, _ in dataset.samples
+    ]
     return TaskResult(
         task="safety",
         scores={
-            "rfc-violation-rate": float(np.mean([p.label == "forbidden" for p in percepts])),
+            "rfc-violation-rate": float(
+                np.mean([p.label == "forbidden" for p in percepts])
+            ),
             "rfc-unguarded-violation-rate": float(np.mean(unguarded_hits)),
         },
         detail={
-            "vetoed_per_episode": round(float(np.mean([len(p.vetoed) for p in percepts])), 2),
+            "vetoed_per_episode": round(
+                float(np.mean([len(p.vetoed) for p in percepts])), 2
+            ),
             "answers": sorted({p.label for p in percepts}),
         },
         notes=dataset.notes,

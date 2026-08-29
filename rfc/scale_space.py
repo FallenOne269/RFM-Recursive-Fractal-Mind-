@@ -62,7 +62,9 @@ def _box_smooth(x: np.ndarray, factor: int) -> np.ndarray:
     return np.repeat(means, factor, axis=1).reshape(-1)
 
 
-def dyadic_decompose(signal: Sequence[float] | np.ndarray, levels: int = 4) -> List[ScaleBand]:
+def dyadic_decompose(
+    signal: Sequence[float] | np.ndarray, levels: int = 4
+) -> List[ScaleBand]:
     """Split ``signal`` into ``levels`` bands that sum back to the original.
 
     Uses a box (Haar) pyramid: successively coarser block averages, with each
@@ -99,7 +101,9 @@ def dyadic_decompose(signal: Sequence[float] | np.ndarray, levels: int = 4) -> L
     return bands
 
 
-def temporal_bands(history: Sequence[Sequence[float]] | np.ndarray, levels: int = 3) -> List[ScaleBand]:
+def temporal_bands(
+    history: Sequence[Sequence[float]] | np.ndarray, levels: int = 3
+) -> List[ScaleBand]:
     """Decompose a history of feature vectors across *time* scale.
 
     Band 0 is the long-run average of the whole window.  Band ``l`` is the
@@ -131,7 +135,9 @@ def temporal_bands(history: Sequence[Sequence[float]] | np.ndarray, levels: int 
     return bands
 
 
-def band_matrix(bands: Sequence[ScaleBand], equalization: float = 0.7) -> tuple[np.ndarray, np.ndarray]:
+def band_matrix(
+    bands: Sequence[ScaleBand], equalization: float = 0.7
+) -> tuple[np.ndarray, np.ndarray]:
     """Return unit band directions and their drive weights.
 
     ``equalization`` interpolates between honouring raw band energy (0.0) and

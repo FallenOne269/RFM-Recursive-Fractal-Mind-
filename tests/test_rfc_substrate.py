@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from rfc.field import Hypothesis, ResonantField, normalize_vector
+from rfc.field import ResonantField, normalize_vector
 from rfc.operator import OperatorParams, ScaleInvariantOperator
 from rfc.scale_space import band_matrix, dyadic_decompose, temporal_bands
 
@@ -81,7 +81,7 @@ def test_normalize_conserves_mass_within_each_scale():
     field.spawn([1.0, 0.0], scale=1, label="a", amplitude=0.1)
     field.normalize()
     for scale in (0, 1):
-        energy = sum(h.amplitude ** 2 for h in field.ordered() if h.scale == scale)
+        energy = sum(h.amplitude**2 for h in field.ordered() if h.scale == scale)
         assert energy == pytest.approx(1.0)
 
 
@@ -104,10 +104,14 @@ def test_resonance_selects_the_matching_scale():
     matched_decoy = field.spawn(decoy, scale=3, label="decoy_fine", amplitude=0.1)
     mistuned = field.spawn(fine, scale=0, label="mistuned", amplitude=0.1)
     mistuned_decoy = field.spawn(decoy, scale=0, label="decoy_coarse", amplitude=0.1)
-    ScaleInvariantOperator(OperatorParams(cross_scale_leak=0.05)).run(field, bands, steps=24)
+    ScaleInvariantOperator(OperatorParams(cross_scale_leak=0.05)).run(
+        field, bands, steps=24
+    )
 
     matched_share = matched.amplitude / (matched.amplitude + matched_decoy.amplitude)
-    mistuned_share = mistuned.amplitude / (mistuned.amplitude + mistuned_decoy.amplitude)
+    mistuned_share = mistuned.amplitude / (
+        mistuned.amplitude + mistuned_decoy.amplitude
+    )
     assert matched_share > mistuned_share
     assert matched_share > 0.8
 
@@ -131,7 +135,9 @@ def test_field_is_bounded_under_a_long_run():
     bands = dyadic_decompose(rng.normal(size=dim), 4)
     field = ResonantField(dim=dim)
     for index in range(12):
-        field.spawn(rng.normal(size=dim), scale=index % 4, label=f"c{index % 4}", amplitude=0.4)
+        field.spawn(
+            rng.normal(size=dim), scale=index % 4, label=f"c{index % 4}", amplitude=0.4
+        )
     ScaleInvariantOperator().run(field, bands, steps=200)
     amplitudes = [h.amplitude for h in field.ordered()]
     assert amplitudes
