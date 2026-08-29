@@ -61,8 +61,46 @@ pytest
 - **Lightweight patterns:** FIM metadata stores compact signatures (centroid and spread) instead of full point clouds to keep memory low.
 - **CPU/GPU agnostic:** AMIFS automatically uses `cupy` if available; otherwise falls back to `numpy` while keeping interfaces identical.
 
+## Resonant Fractal Cognition (RFC) — a new architecture derived from this research
+
+Alongside the RFAI reference implementation, this repository now contains
+**RFC**, a distinct cognitive architecture synthesised from the research
+collected here (the FRM blueprint, the FRCL analysis, RFAI/RFIM, and the agent
+specification in `AGENTS.md`).
+
+RFC's premise is that belief should be an **interference pattern** rather than a
+stored value. Evidence is split across a dyadic ladder of scales; hypotheses are
+oscillators whose natural frequencies sit on that same ladder; a hypothesis
+grows when evidence at *its* scale arrives in phase with it; and a claim only
+scores well when its scales agree, because the read-out sums them as waves.
+
+Where the source blueprint stacks three layers — a quantum-inspired substrate, a
+neuro-symbolic middle, a metacognitive top — and then observes that integrating
+them is the hard part, RFC has **one operator** applied at different scales to
+different evidence. Perception, symbol formation, recursion on the residual, and
+the system's reflection on its own telemetry are all the same code.
+
+- Symbols crystallise out of sustained resonance and feed back as priors.
+- Constraints are physics: a hypothesis violating an invariant is phase-inverted
+  and cut off from drive, so its amplitude is provably non-increasing and it can
+  never be selected.
+- Metacognition re-runs the same operator over the system's own episode history,
+  with bounded parameter nudges and rollback.
+
+```bash
+python -m rfc.demo                    # narrated walkthrough plus benchmarks
+python -m rfc.cli bench               # baselines and ablations (~90s)
+```
+
+Measured results — including the two tasks where a five-line cosine baseline
+wins, and a metacognitive loop whose net effect over six seeds is negative — are
+reported in full in **[docs/RFC_ARCHITECTURE.md](docs/RFC_ARCHITECTURE.md)**.
+
+
 ## Repository layout
 
 - `rfai/`: core package modules (AMIFS, DFE, RSA, nodes, graph, core, simulation, CLI/demo)
-- `tests/`: pytest suite validating AMIFS, DFE, graph/nodes/RSA logic, fractal core, and scenarios
+- `rfc/`: Resonant Fractal Cognition — scale space, resonant field, the scale-invariant operator, constraints, symbol lattice, metacognition, benchmarks
+- `docs/RFC_ARCHITECTURE.md`: RFC's design, provenance, measured results, and limitations
+- `tests/`: pytest suite validating AMIFS, DFE, graph/nodes/RSA logic, fractal core, scenarios, and the RFC substrate/engine/integration
 
