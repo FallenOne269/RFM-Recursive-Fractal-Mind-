@@ -85,7 +85,10 @@ the system's reflection on its own telemetry are all the same code.
   and cut off from drive, so its amplitude is provably non-increasing and it can
   never be selected.
 - Metacognition re-runs the same operator over the system's own episode history,
-  with bounded parameter nudges and rollback.
+  with bounded parameter nudges and rollback. It works out which rung of its own
+  scale ladder to stop believing by asking, of each rung, whether removing it
+  would have changed an answer that turned out to be wrong — credit graded by
+  reward, never by whether the other rungs agree.
 
 ```bash
 python -m rfc.demo                    # narrated walkthrough plus benchmarks
@@ -93,8 +96,9 @@ python -m rfc.cli bench               # baselines and ablations (~90s)
 ```
 
 Measured results — including the two tasks where a five-line cosine baseline
-wins, and a metacognitive loop whose net effect over six seeds is negative — are
-reported in full in **[docs/RFC_ARCHITECTURE.md](docs/RFC_ARCHITECTURE.md)**.
+wins, and the gap that remains between the self-tuning loop and a hand-set
+configuration — are reported in full in
+**[docs/RFC_ARCHITECTURE.md](docs/RFC_ARCHITECTURE.md)**.
 
 
 ## Repository layout

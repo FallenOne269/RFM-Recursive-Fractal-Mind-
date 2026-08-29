@@ -568,7 +568,9 @@ def run_drift(seed: int = 0, seeds: int = 6) -> TaskResult:
                 float(np.mean(hits[shift:]))
             )
             if reflect_every:
-                tilts.append(mind.operator.params.band_tilt)
+                tilts.append(
+                    [round(value, 2) for value in mind.operator.params.band_trust]
+                )
                 detail.setdefault("policies", []).append(  # type: ignore[union-attr]
                     [r.applied for r in mind.meta.history if r.applied][:6]
                 )
@@ -578,7 +580,7 @@ def run_drift(seed: int = 0, seeds: int = 6) -> TaskResult:
         scores["rfc-post-shift"] - scores["rfc-no-metacognition-post-shift"]
     )
     detail["seeds"] = seeds
-    detail["band_tilt_per_seed"] = [round(value, 3) for value in tilts]
+    detail["band_trust_per_seed"] = tilts
     return TaskResult(task="drift", scores=scores, detail=detail, notes=notes)
 
 

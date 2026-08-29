@@ -136,16 +136,65 @@ no second system to bridge to.
 ### 3.6 Metacognition (`rfc/metacognition.py`)
 
 Episode telemetry becomes a signed feature vector (coherence, decisiveness,
-recursion depth, veto pressure, field pressure, reward-against-a-trailing-
-baseline, and a scale-credit signal). A window of those vectors is decomposed
-across time scale and fed to **the same operator**, resonating against a field
-of policy hypotheses — each a bounded nudge to `Ψ`'s own parameters, with a
-signature describing the situation it fits.
+recursion depth, veto pressure, field pressure, reward against a trailing
+baseline, and one **credit slot per band**). A window of those vectors is
+decomposed across time scale and fed to **the same operator**, resonating
+against a field of policy hypotheses — each a bounded nudge to `Ψ`'s own
+parameters, with a signature describing the situation it fits.
 
-Two guardrails: every parameter has hard bounds and every nudge is small, and
-the best-performing parameter set is remembered and restored when reward
-degrades. The expectation yardstick decays, so a regime change does not freeze
-adaptation forever. When no policy fits confidently and the system is
+The hard part is not the loop, it is the credit. To act on a scale ladder the
+system has to work out *which rung is letting it down*, and the obvious signals
+all fail:
+
+- **Consensus** — score each band against what the others say — inverts exactly
+  when it is needed. On the drift task the two corrupted bands see the *same*
+  interference, so they agree with each other, and the clean dissenting bands
+  look like the unreliable ones. Any signal built on agreement assumes the
+  majority of the ladder is right, and the interesting failures are the ones
+  where it is not.
+- **Solo accuracy** — how often would this band be right on its own — sounds
+  majority-free and is, but it measures the wrong thing. It conflates *weak*
+  with *misleading*. Measured per-band solo accuracy runs `[1.00, 0.55, 0.76,
+  0.94]` on this task *before* anything is corrupted, and marking down the
+  weakest band costs accuracy rather than recovering it (0.719 against 0.777
+  for leaving the ladder alone).
+
+What works is **counterfactual pivotality graded by reward**. For each band,
+re-run the coherent read-out with that band's contribution removed:
+
+- the answer was right and would have changed without this band → it carried a
+  correct decision, credit it;
+- the answer was wrong and would have changed without this band → it is what
+  tipped the error, debit it;
+- the answer would not have changed → this band decided nothing, score zero.
+
+Nothing here consults another band's opinion. The counterfactual is graded by
+the reward, so it holds up when the unreliable bands outnumber the reliable
+ones. Two corrections make it usable: episodes are weighted by the inverse
+frequency of their outcome, because most episodes are right and an unweighted
+average ends up flattering whichever band swings the answer around most; and
+the ladder mean is subtracted, because on a failing stream *some* band is
+pivotal nearly every time and every band's raw score drifts negative together.
+Subtracting a common offset from a reward-graded statistic is not the bands
+scoring each other — that distinction is the whole point.
+
+The signal also goes quiet by itself on a healthy system: with the answers
+coming out right, no band is ever the one that tipped a wrong answer, and a
+confident read-out rarely turns on any single band. No "only adapt when
+failing" rule was needed; the loop simply holds.
+
+What it adjusts is a **per-band trust vector**, not a single coarse-to-fine
+tilt. Reliability is not monotone in scale — the numbers above show band 1
+weakest and band 0 strongest before any corruption — so "trust the fine half"
+cannot express which rung is actually at fault. There is one policy per band,
+and only in the distrust direction: the band weights are renormalised, so
+nothing depends on the absolute level of trust and raising every band in turn
+is an expensive no-op, which is what a trust-and-distrust pair did in practice.
+
+Two guardrails remain: every parameter has hard bounds and every nudge is
+small, and the best-performing configuration is remembered and restored when
+reward degrades. The expectation yardstick decays, so a regime change does not
+freeze adaptation forever. When no policy fits confidently and the system is
 underperforming, it runs a bounded experiment instead of guessing.
 
 ### 3.7 Constraints (`rfc/constraints.py`)
@@ -206,39 +255,38 @@ off — on a skewed stream, with no labels, no gradients, and no training phase.
 Notably the gain is not bought from the rare classes: they improve by 12.5
 points too. RFC is still behind flat-cosine overall.
 
-### Robustness and self-tuning (`drift`, 6 seeds)
+### Robustness and self-tuning (`drift`)
 
 Halfway through the stream, strong low-frequency interference swamps the coarse
 half of the ladder. Nothing announces it.
 
 | system | overall | after the shift |
 |---|---|---|
-| rfc, no metacognition | **0.889** | **0.777** |
-| rfc | 0.874 | 0.748 |
+| rfc | **0.905** | **0.810** |
+| rfc, no metacognition | 0.889 | 0.777 |
 | flat-cosine | 0.812 | 0.625 |
 | band-cosine | 0.777 | 0.554 |
 
 **The conjunctive cross-scale read-out is the architecture's clearest win.**
-When two of four scales are corrupted, RFC holds 0.777 where a flat correlation
-falls to 0.625 and a scale-equalised one to 0.554 — 15 and 22 points. Because a
-label only scores well when its scales agree, corrupted scales cancel instead of
-voting.
+When two of four scales are corrupted, RFC holds 0.777 *without adapting at
+all*, where a flat correlation falls to 0.625 and a scale-equalised one to
+0.554 — 15 and 22 points. Because a label only scores well when its scales
+agree, corrupted scales cancel instead of voting.
 
-**The metacognitive loop is the architecture's clearest failure.** Its mean
-effect over six seeds is **−0.029**: it moved `band_tilt` in the correct
-direction on three seeds (+0.18 to +0.74, recovering 4–9 points) and the wrong
-direction on the other three, and lost slightly on average. The mechanism works
-— tilting toward the fine scales genuinely recovers accuracy, and the loop is
-bounded and rolls back — but its *diagnosis* is a coin flip.
+**Metacognition adds `+0.033` post-shift on top of that** (6 seeds; `+0.025`
+over 10 seeds, so the effect is small but consistent in sign). An earlier
+version of this loop, built on cross-scale consensus, scored **−0.029** — it
+actively made the system worse — and §3.6 records what was wrong with it and
+what replaced it. The applied-policy trace is now mostly `hold`, with occasional
+targeted `distrust_band_N`: much of the gain is simply that the loop stopped
+damaging a configuration that was already working.
 
-The diagnosis of the diagnosis, measured rather than guessed: consensus-based
-self-attribution inverts when the corrupted scales are the *majority*. Both
-coarse bands see the same interference, so they agree with each other, and the
-dissenting fine scales look like the unreliable ones. Reward-weighted credit
-assignment against the leave-one-out consensus does not separate them either
-(post-shift conditional means: −0.080 when correct, +0.030 when wrong — pointing
-the wrong way). Fixing this needs an attribution signal that does not assume
-the majority is right.
+The honest ceiling: hand-setting the trust vector to `(-0.5, -0.5, +0.5, +0.5)`
+— mark down exactly the two bands the task corrupts — scores **0.892**
+post-shift. So the available headroom over no adaptation is about `+0.115`, and
+the loop discovers roughly a quarter of it from reward alone, with no idea which
+bands were corrupted or that anything happened at all. That gap is the honest
+remaining limitation, not a rounding error.
 
 ### Safety (`safety`)
 
@@ -260,8 +308,10 @@ a hypothesis' amplitude never rises again on any subsequent step.
 **Claimed.** A single operator that serves perception, symbol formation,
 recursion, and self-inspection; a cross-scale read-out that is measurably more
 robust to a corrupted scale than either baseline; unsupervised consolidation
-worth ~9 points with no gradients; a constraint mechanism with a checkable
-physical guarantee; and full determinism and auditability throughout.
+worth ~9 points with no gradients; a self-tuning loop that identifies which
+rung of its own ladder to stop believing, from reward alone and without
+assuming the majority of rungs is right; a constraint mechanism with a
+checkable physical guarantee; and full determinism and auditability throughout.
 
 **Not claimed.** Not consciousness, not AGI, not quantum computation — the
 "quantum-inspired" part is complex amplitudes and Born-rule read-out on
@@ -274,8 +324,14 @@ matrix will need attention long before this reaches interesting sizes.
 
 ## 6. Known limitations
 
-1. **Metacognitive attribution is unreliable** (§4). The most important open
-   problem here.
+1. **Metacognitive attribution works but is weak.** Counterfactual pivotality
+   graded by reward (§3.6) took the loop from actively harmful (−0.029) to
+   modestly useful (+0.033), and it is majority-free by construction. It still
+   recovers only about a quarter of the headroom a hand-set trust vector gets
+   (0.810 against a 0.892 ceiling, over 0.777 unadapted). The credit estimate
+   is noisy at this window size, and the per-band policies compete for the same
+   reflection against nine scalar policies that often win on generic
+   "doing badly" evidence without being tested against outcomes.
 2. **Classification accuracy trails a plain correlation** on clean, unambiguous
    evidence, and each episode costs ~24–90 operator steps to get there.
 3. **The concept codebook is supplied.** Unlabelled "exploratory" hypotheses
@@ -320,7 +376,7 @@ invariant.
 | file | role |
 |---|---|
 | `rfc/scale_space.py` | dyadic ladder over space and over time |
-| `rfc/field.py` | hypotheses, coalitions, conjunctive read-out |
+| `rfc/field.py` | hypotheses, coalitions, conjunctive read-out, per-band counterfactuals |
 | `rfc/operator.py` | `Ψ` — the whole architecture's one moving part |
 | `rfc/constraints.py` | invariants as physics |
 | `rfc/lattice.py` | symbols by crystallisation |

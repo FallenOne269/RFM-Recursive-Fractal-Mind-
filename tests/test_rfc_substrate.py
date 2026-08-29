@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from rfc.field import ResonantField, normalize_vector
-from rfc.operator import OperatorParams, ScaleInvariantOperator
+from rfc.operator import BAND_TRUST_BOUNDS, OperatorParams, ScaleInvariantOperator
 from rfc.scale_space import band_matrix, dyadic_decompose, temporal_bands
 
 
@@ -153,3 +153,76 @@ def test_operator_parameter_updates_stay_inside_their_bounds():
     assert lowered.damping >= 0.01
     with pytest.raises(KeyError):
         params.with_deltas({"not_a_parameter": 1.0})
+
+
+def test_pivotality_finds_the_band_that_decided_the_answer():
+    """A band is pivotal when the read-out would land elsewhere without it."""
+
+    field = ResonantField(dim=2)
+    quiet = normalize_vector([1.0, 0.0])
+    loud = normalize_vector([0.0, 1.0])
+    for scale in (0, 1):
+        hypothesis = field.spawn(quiet, scale=scale, label="quiet", amplitude=0.5)
+        hypothesis.lag = 0.0
+    decisive = field.spawn(loud, scale=2, label="loud", amplitude=1.2)
+    decisive.lag = 0.0
+
+    assert field.label_distribution()["loud"] > field.label_distribution()["quiet"]
+    pivotal = field.band_pivotality("loud")
+    assert pivotal[2] is True  # remove it and "quiet" wins
+    assert pivotal[0] is False  # remove it and "loud" still wins
+    assert pivotal[1] is False
+
+
+def test_pivotality_is_empty_without_an_answer():
+    field = ResonantField(dim=2)
+    field.spawn([1.0, 0.0], scale=0, label="a", amplitude=0.5)
+    field.spawn([0.0, 1.0], scale=1, label="b", amplitude=0.5)
+    assert not any(field.band_pivotality("").values())
+
+
+def test_band_trust_is_bounded_and_local():
+    params = OperatorParams()
+    tuned = params.with_band_trust(2, 0.5).with_band_trust(2, 99.0)
+    low, high = BAND_TRUST_BOUNDS
+    assert tuned.band_trust[2] == pytest.approx(high)
+    assert tuned.band_trust[0] == 0.0
+    assert tuned.band_trust[1] == 0.0
+    floored = params.with_band_trust(0, -99.0)
+    assert floored.band_trust[0] == pytest.approx(low)
+    with pytest.raises(ValueError):
+        params.with_band_trust(-1, 0.1)
+
+
+def test_band_trust_changes_what_the_read_out_believes():
+    """Trust reaches the answer, not just the parameters.
+
+    Trust does not act by handing a band more amplitude -- mass is conserved
+    per scale, so the normaliser would take that straight back.  It acts on how
+    hard a band's evidence drives, which changes which hypotheses win *inside*
+    that scale and how firmly they lock, and leaks across scales from there.
+    So it only shows up in a field with something to compete: a pair of lone
+    oscillators, each alone at its own scale, is normalised to a dead heat no
+    matter what any of this is set to.
+
+    That the shift is in the *right* direction is an outcome claim, measured
+    over a whole stream in the integration tests rather than asserted here.
+    """
+
+    from rfc.engine import RFCConfig, ResonantFractalCognition
+    from rfc.tasks import make_drift
+
+    dataset = make_drift(0, trials=1)
+    evidence = dataset.samples[0][0]
+
+    def distribution(trust):
+        config = RFCConfig(
+            dim=dataset.dim, seed=0, params=OperatorParams(band_trust=trust)
+        )
+        mind = ResonantFractalCognition(config, codebook=dataset.codebook)
+        return mind.perceive(evidence).alternatives
+
+    uniform = distribution(())
+    tilted = distribution((-1.0, -1.0, 1.0, 1.0))
+    drift = sum(abs(tilted[key] - uniform[key]) for key in uniform)
+    assert drift > 0.01

@@ -127,3 +127,37 @@ def test_cli_can_forbid_an_answer(capsys):
     )
     output = capsys.readouterr().out
     assert f"answer={banned} " not in output
+
+
+def test_distrusting_the_corrupted_bands_recovers_accuracy():
+    """The outcome claim behind per-band trust, on the task it was built for.
+
+    Two of the four bands are swamped from the midpoint on.  Marking those two
+    down is worth real accuracy, which is what makes the metacognitive loop's
+    job -- working out *which* bands to mark down, from reward alone -- worth
+    doing at all.
+    """
+
+    from rfc.tasks import _build_mind, make_drift
+
+    dataset = make_drift(0)
+    shift = int(dataset.extra["shift"])
+
+    def post_shift(trust):
+        mind = _build_mind(dataset, 0, overrides={"band_trust": trust})
+        hits = [
+            mind.perceive(evidence).label == truth
+            for evidence, truth in dataset.samples
+        ]
+        return float(np.mean(hits[shift:]))
+
+    assert post_shift((-0.5, -0.5, 0.5, 0.5)) > post_shift(())
+
+
+def test_metacognition_helps_rather_than_hurts():
+    """The loop must at least not make the system worse on its own benchmark."""
+
+    from rfc.tasks import run_drift
+
+    result = run_drift(0, seeds=3)
+    assert result.scores["metacognition-delta-post-shift"] > 0.0

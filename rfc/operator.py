@@ -35,7 +35,7 @@ oscillators for one tick:
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import Dict, List, Mapping, Optional, Sequence
+from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -61,8 +61,11 @@ TUNABLE_PARAMETERS: Dict[str, tuple[float, float]] = {
     "inhibition": (0.0, 2.0),
     "cross_scale_leak": (0.0, 0.6),
     "band_equalization": (0.0, 1.0),
-    "band_tilt": (-1.5, 1.5),
 }
+
+#: Per-band trust is bounded too, but it is a vector rather than a scalar, so
+#: it travels its own update path (see ``OperatorParams.with_band_trust``).
+BAND_TRUST_BOUNDS = (-2.0, 2.0)
 
 
 @dataclass(frozen=True)
@@ -77,7 +80,7 @@ class OperatorParams:
     inhibition: float = 0.7
     cross_scale_leak: float = 0.1
     band_equalization: float = 0.25
-    band_tilt: float = 0.0
+    band_trust: Tuple[float, ...] = ()
     prior_gain: float = 0.35
     dt: float = 0.35
     prune_threshold: float = 0.002
@@ -98,8 +101,31 @@ class OperatorParams:
             )
         return replace(self, **updates)
 
+    def with_band_trust(self, level: int, delta: float) -> "OperatorParams":
+        """Nudge how far one band is trusted, in log2 units, within bounds.
+
+        A vector rather than a scalar because reliability is not monotone in
+        scale: measured per-band solo accuracy on the drift task runs
+        [1.00, 0.55, 0.76, 0.94] *before* anything is corrupted, so "trust the
+        fine half" cannot express which band is actually letting the system
+        down.  One entry per band can.
+        """
+
+        level = int(level)
+        if level < 0:
+            raise ValueError("band level must be >= 0")
+        low, high = BAND_TRUST_BOUNDS
+        trust = list(self.band_trust)
+        while len(trust) <= level:
+            trust.append(0.0)
+        trust[level] = float(np.clip(trust[level] + float(delta), low, high))
+        return replace(self, band_trust=tuple(trust))
+
     def as_dict(self) -> Dict[str, float]:
-        return {name: float(getattr(self, name)) for name in TUNABLE_PARAMETERS}
+        values = {name: float(getattr(self, name)) for name in TUNABLE_PARAMETERS}
+        for level, trust in enumerate(self.band_trust):
+            values[f"band_trust_{level}"] = float(trust)
+        return values
 
 
 @dataclass
@@ -152,14 +178,19 @@ class ScaleInvariantOperator:
 
         directions, weights = band_matrix(bands, params.band_equalization)
         band_levels = np.array([band.level for band in bands], dtype=int)
-        if params.band_tilt:
-            # How much to trust each scale.  Positive tilt leans on fine
-            # detail, negative on coarse shape.  Metacognition owns this knob:
-            # it is how the system says "my coarse evidence has stopped being
-            # reliable" without anyone telling it which scale went bad.
-            centre = (band_levels.max() + band_levels.min()) / 2.0
-            tilt = 2.0 ** (params.band_tilt * (band_levels.astype(float) - centre))
-            weights = weights * tilt
+        if params.band_trust:
+            # How far each band is believed, in log2 units.  Metacognition owns
+            # this vector: it is how the system says "band 2 has stopped being
+            # reliable" without anyone telling it which band went bad, and
+            # without assuming the bands that agree with each other are right.
+            trust = np.array(
+                [
+                    params.band_trust[level] if level < len(params.band_trust) else 0.0
+                    for level in band_levels
+                ],
+                dtype=float,
+            )
+            weights = weights * (2.0**trust)
             weights = weights / max(float(weights.mean()), 1e-12)
         band_frequencies = params.base_frequency * (2.0 ** -band_levels.astype(float))
         band_phases = band_frequencies * float(time)

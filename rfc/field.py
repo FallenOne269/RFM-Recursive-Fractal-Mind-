@@ -284,6 +284,47 @@ class ResonantField:
             result[scale] = {label: value / total for label, value in weights.items()}
         return result
 
+    def scale_solo_labels(self) -> Dict[int, str]:
+        """What each scale would answer if it had to decide alone."""
+
+        return {
+            scale: max(dist.items(), key=lambda item: (item[1], item[0]))[0]
+            for scale, dist in self.scale_distributions().items()
+            if dist
+        }
+
+    def band_pivotality(self, answer: str) -> Dict[int, bool]:
+        """Per band: would dropping it have changed the answer?
+
+        The counterfactual is run through the same coherent read-out, just
+        without that band's contribution.  This is the question worth asking of
+        a band -- not "is it confident", not "does it agree with the others",
+        but "did it decide this".  Paired with whether the answer was right, it
+        is the only one of the three that survives the unreliable bands being
+        in the majority.
+        """
+
+        per_scale = self.scale_complex()
+        levels = sorted(per_scale)
+        if len(levels) < 2 or not answer:
+            return {level: False for level in levels}
+        labels = sorted({label for bucket in per_scale.values() for label in bucket})
+        pivotal: Dict[int, bool] = {}
+        for dropped in levels:
+            held_out = {
+                label: sum(
+                    per_scale[level].get(label, 0j)
+                    for level in levels
+                    if level != dropped
+                )
+                for label in labels
+            }
+            without = max(
+                held_out.items(), key=lambda item: (abs(item[1]) ** 2, item[0])
+            )[0]
+            pivotal[dropped] = without != answer
+        return pivotal
+
     def scale_consensus(self) -> Dict[int, float]:
         """How far each scale is out of step with the rest of the ladder.
 

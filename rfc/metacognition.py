@@ -19,14 +19,21 @@ Two guardrails keep this from being a self-amplifying loop:
 from __future__ import annotations
 
 from dataclasses import dataclass, field as dataclass_field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Mapping, Optional, Tuple
 
 import numpy as np
 
 from .field import ResonantField, normalize_vector
 from .operator import OperatorParams, ScaleInvariantOperator
 from .scale_space import temporal_bands
-from .telemetry import FEATURE_NAMES, Telemetry
+from .telemetry import BAND_SLOTS, FEATURE_NAMES, Telemetry
+
+#: Delta keys of this form route to the per-band trust vector rather than to a
+#: scalar operator parameter.
+BAND_TRUST_PREFIX = "band_trust:"
+
+#: How far one reflection may move a single band's trust, in log2 units.
+BAND_TRUST_STEP = 0.6
 
 __all__ = [
     "MetaPolicy",
@@ -52,7 +59,20 @@ class MetaPolicy:
     rationale: str = ""
 
     def vector(self) -> np.ndarray:
-        return normalize_vector(np.array(self.signature, dtype=float))
+        """The signature as a unit vector, zero-padded to the feature width."""
+
+        padded = np.zeros(len(FEATURE_NAMES), dtype=float)
+        values = np.array(self.signature, dtype=float)[: padded.size]
+        padded[: values.size] = values
+        return normalize_vector(padded)
+
+    def band(self) -> Optional[int]:
+        """The band this policy adjusts, if it is a per-band trust policy."""
+
+        for key in self.deltas:
+            if key.startswith(BAND_TRUST_PREFIX):
+                return int(key[len(BAND_TRUST_PREFIX) :])
+        return None
 
 
 # Feature order: coherence, decisiveness, depth, veto_pressure, field_pressure,
@@ -112,19 +132,45 @@ DEFAULT_POLICIES: Tuple[MetaPolicy, ...] = (
         {"band_equalization": -0.04},
         "amplifying noise into confident nonsense; trust the loud bands again",
     ),
-    MetaPolicy(
-        "tilt_fine",
-        (0.0, -0.3, 0.0, 0.0, 0.0, -0.7, 1.0),
-        {"band_tilt": 0.2},
-        "only the fine scales are still separating anything; stop leaning on coarse shape",
-    ),
-    MetaPolicy(
-        "tilt_coarse",
-        (0.0, -0.3, 0.0, 0.0, 0.0, -0.7, -1.0),
-        {"band_tilt": -0.2},
-        "the fine scales have gone to noise; lean back on coarse shape",
-    ),
 )
+
+
+def _band_trust_policies() -> Tuple[MetaPolicy, ...]:
+    """One policy per band: withdraw trust from the band that tips the errors.
+
+    Each keys off that band's own credit slot and nothing else, so the decision
+    is "has this band been deciding my mistakes?" rather than "does this band
+    disagree with the others?".  The second question is the one that inverts
+    when the unreliable bands are in the majority; the first cannot, because a
+    band's credit is signed by the reward and never by a vote.
+
+    Only distrust, deliberately.  The band weights are renormalised, so
+    nothing depends on the absolute level of trust and raising every band in
+    turn is an expensive no-op -- which is exactly what a trust-and-distrust
+    pair produced in practice.  Withdrawing trust from whichever band is
+    tipping the errors says the same thing unambiguously, and a band that
+    recovers is re-trusted in relative terms as its neighbours are marked down.
+    """
+
+    policies: List[MetaPolicy] = []
+    base = len(FEATURE_NAMES) - BAND_SLOTS
+    for level in range(BAND_SLOTS):
+        signature = [0.0] * len(FEATURE_NAMES)
+        signature[base + level] = -1.0
+        # Mild weight on reward so a healthy system leaves the ladder alone.
+        signature[FEATURE_NAMES.index("reward")] = -0.35
+        policies.append(
+            MetaPolicy(
+                f"distrust_band_{level}",
+                tuple(signature),
+                {f"{BAND_TRUST_PREFIX}{level}": -BAND_TRUST_STEP},
+                f"band {level} has been tipping the answers that turned out wrong",
+            )
+        )
+    return tuple(policies)
+
+
+DEFAULT_POLICIES = DEFAULT_POLICIES + _band_trust_policies()
 
 
 @dataclass
@@ -138,7 +184,7 @@ class MetaConfig:
     expectation_decay: float = 0.03
     min_confidence: float = 0.2
     exploration: float = 0.25
-    probe_parameters: Tuple[str, ...] = ("band_tilt", "drive_gain", "damping")
+    probe_parameters: Tuple[str, ...] = ("drive_gain", "damping", "coupling")
 
 
 @dataclass
@@ -170,6 +216,22 @@ class MetaResonator:
         self._probe_sign = 1.0
         self._probe_reward: Optional[float] = None
 
+    @staticmethod
+    def _apply(operator: ScaleInvariantOperator, deltas: Mapping[str, float]) -> None:
+        """Route each delta to the scalar parameters or to the trust vector."""
+
+        scalars = {
+            key: value
+            for key, value in deltas.items()
+            if not key.startswith(BAND_TRUST_PREFIX)
+        }
+        if scalars:
+            operator.params = operator.params.with_deltas(scalars)
+        for key, value in deltas.items():
+            if key.startswith(BAND_TRUST_PREFIX):
+                level = int(key[len(BAND_TRUST_PREFIX) :])
+                operator.params = operator.params.with_band_trust(level, value)
+
     def _probe(self, operator: ScaleInvariantOperator, reward: float) -> MetaReport:
         """Change something small and find out, instead of guessing.
 
@@ -188,7 +250,7 @@ class MetaResonator:
         self._probe_reward = reward
         name = config.probe_parameters[self._probe_index]
         delta = self._probe_sign * config.exploration
-        operator.params = operator.params.with_deltas({name: delta})
+        self._apply(operator, {name: delta})
         return MetaReport(
             applied=f"probe:{name}",
             rationale="no policy fitted; running a bounded experiment instead",
@@ -300,7 +362,7 @@ class MetaResonator:
 
         scale = config.step_size * float(confidence)
         deltas = {key: value * scale for key, value in policy.deltas.items()}
-        operator.params = operator.params.with_deltas(deltas)
+        self._apply(operator, deltas)
         report.applied = name
         report.deltas = deltas
         report.params = operator.params.as_dict()

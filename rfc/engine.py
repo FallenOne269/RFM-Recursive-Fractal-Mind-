@@ -33,6 +33,19 @@ __all__ = ["RFCConfig", "Percept", "ResonantFractalCognition"]
 _GOLDEN = 0.6180339887498949
 
 
+def _band_pivotal(field: ResonantField, answer: str) -> Tuple[float, ...]:
+    """Per band: would the answer have come out differently without it?
+
+    Recorded raw and unjudged.  It only becomes evidence about a band once the
+    episode's reward says whether that answer was worth deciding.
+    """
+
+    if not answer:
+        return ()
+    pivotal = field.band_pivotality(answer)
+    return tuple(float(pivotal[level]) for level in sorted(pivotal))
+
+
 @dataclass
 class RFCConfig:
     dim: int = 32
@@ -72,6 +85,7 @@ class Percept:
     residual_norm: float
     scale_balance: float = 0.0
     scale_agreement: float = 0.0
+    band_pivotal: Tuple[float, ...] = ()
     trace: List[Dict[str, Any]] = dataclass_field(default_factory=list)
 
     def as_dict(self) -> Dict[str, Any]:
@@ -333,6 +347,7 @@ class ResonantFractalCognition:
             residual_norm=float(np.linalg.norm(outcome.residual)),
             scale_balance=outcome.field.scale_balance(),
             scale_agreement=outcome.field.scale_agreement(),
+            band_pivotal=_band_pivotal(outcome.field, label),
             trace=outcome.trace,
         )
 
@@ -354,6 +369,7 @@ class ResonantFractalCognition:
                 residual_norm=percept.residual_norm,
                 scale_balance=percept.scale_balance,
                 scale_agreement=percept.scale_agreement,
+                band_pivotal=percept.band_pivotal,
                 reward=reward,
                 params=self.operator.params.as_dict(),
             )
