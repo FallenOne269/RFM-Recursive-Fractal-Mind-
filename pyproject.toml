@@ -25,5 +25,5 @@ addopts = "-q"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["rfai*"]
+include = ["rfai*", "rfc*"]
 
