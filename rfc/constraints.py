@@ -47,16 +47,23 @@ class Invariant:
     description: str = ""
 
     def __post_init__(self) -> None:
+        """Clamp ``severity`` into the valid ``(0, 1]`` range."""
+
         self.severity = float(np.clip(self.severity, 1e-3, 1.0))
 
     def violated_by(
         self, hypothesis: Hypothesis, context: Mapping[str, object]
     ) -> bool:
+        """Return True if ``hypothesis`` violates this invariant under
+        ``context``."""
+
         return bool(self.predicate(hypothesis, context))
 
 
 @dataclass
 class Violation:
+    """A single recorded breach of an invariant by a hypothesis."""
+
     hid: str
     invariant: str
     severity: float
@@ -64,13 +71,19 @@ class Violation:
 
 @dataclass
 class ConstraintReport:
+    """The violations produced by one pass of a ``ConstraintField``."""
+
     violations: List[Violation] = dataclass_field(default_factory=list)
 
     @property
     def count(self) -> int:
+        """Return the total number of recorded violations."""
+
         return len(self.violations)
 
     def by_invariant(self) -> Dict[str, int]:
+        """Tally violations grouped by invariant name."""
+
         counts: Dict[str, int] = {}
         for violation in self.violations:
             counts[violation.invariant] = counts.get(violation.invariant, 0) + 1
@@ -81,14 +94,21 @@ class ConstraintField:
     """Applies invariants to a field by inverting and starving violators."""
 
     def __init__(self, invariants: Optional[Sequence[Invariant]] = None):
+        """Store the invariants (if any) this field will enforce."""
+
         self.invariants: List[Invariant] = list(invariants or [])
 
     def add(self, invariant: Invariant) -> None:
+        """Register an additional invariant to enforce."""
+
         self.invariants.append(invariant)
 
     def apply(
         self, field: ResonantField, context: Optional[Mapping[str, object]] = None
     ) -> ConstraintReport:
+        """Check every hypothesis in ``field`` against all invariants,
+        vetoing violators."""
+
         report = ConstraintReport()
         if not self.invariants:
             return report
@@ -123,6 +143,9 @@ def forbidden_direction(
     target = normalize_vector(vector)
 
     def predicate(hypothesis: Hypothesis, _context: Mapping[str, object]) -> bool:
+        """Return True if the claim is too aligned with the forbidden
+        direction."""
+
         claim = hypothesis.claim()
         if claim.size != target.size:
             return False
@@ -141,6 +164,8 @@ def forbidden_labels(
     banned = set(labels)
 
     def predicate(hypothesis: Hypothesis, _context: Mapping[str, object]) -> bool:
+        """Return True if the hypothesis's label is in the banned set."""
+
         return hypothesis.label in banned
 
     return Invariant(

@@ -23,6 +23,9 @@ _BALANCE_GAIN = 4.0
 
 
 def normalize_vector(vec: Sequence[float] | np.ndarray) -> np.ndarray:
+    """Return ``vec`` as a unit-norm array, or zeros if its norm is
+    negligible."""
+
     arr = np.asarray(vec, dtype=float).reshape(-1)
     norm = float(np.linalg.norm(arr))
     if norm <= _EPS:
@@ -55,6 +58,9 @@ class Hypothesis:
     meta: Dict[str, object] = dataclass_field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        """Normalize the vector and wrap amplitude/phase/lag into
+        their valid ranges."""
+
         self.vector = normalize_vector(self.vector)
         self.amplitude = float(max(0.0, self.amplitude))
         self.phase = float(self.phase % (2.0 * np.pi))
@@ -62,6 +68,8 @@ class Hypothesis:
 
     @property
     def complex_amplitude(self) -> complex:
+        """The oscillator state as a complex number in the lab frame."""
+
         return complex(
             self.amplitude * np.cos(self.phase), self.amplitude * np.sin(self.phase)
         )
@@ -95,6 +103,8 @@ class Hypothesis:
         return self.vector
 
     def clone(self) -> "Hypothesis":
+        """Return an independent copy of this hypothesis."""
+
         return Hypothesis(
             hid=self.hid,
             vector=self.vector.copy(),
@@ -129,6 +139,8 @@ class ResonantField:
     """A mutable population of hypotheses plus the read-outs over it."""
 
     def __init__(self, dim: int, max_size: int = 96):
+        """Create an empty field over ``dim``-dimensional evidence vectors."""
+
         if dim < 1:
             raise ValueError("dim must be >= 1")
         self.dim = int(dim)
@@ -138,10 +150,14 @@ class ResonantField:
 
     # ------------------------------------------------------------------ setup
     def new_id(self, prefix: str = "h") -> str:
+        """Return a fresh, monotonically increasing hypothesis id."""
+
         self._counter += 1
         return f"{prefix}{self._counter}"
 
     def add(self, hypothesis: Hypothesis) -> Hypothesis:
+        """Insert ``hypothesis`` into the field, keyed by its id."""
+
         if hypothesis.vector.size != self.dim:
             raise ValueError(
                 f"hypothesis {hypothesis.hid} has dim {hypothesis.vector.size}, field expects {self.dim}"
@@ -160,6 +176,8 @@ class ResonantField:
         depth: int = 0,
         meta: Optional[Mapping[str, object]] = None,
     ) -> Hypothesis:
+        """Create and add a new hypothesis with a fresh id."""
+
         hypothesis = Hypothesis(
             hid=self.new_id(),
             vector=np.asarray(vector, dtype=float),
@@ -175,13 +193,19 @@ class ResonantField:
         return self.add(hypothesis)
 
     def remove(self, hid: str) -> None:
+        """Drop the hypothesis with id ``hid``, if present."""
+
         self.hypotheses.pop(hid, None)
 
     # ------------------------------------------------------------------ views
     def __len__(self) -> int:
+        """Return the number of hypotheses currently in the field."""
+
         return len(self.hypotheses)
 
     def ids(self) -> List[str]:
+        """Return all hypothesis ids in sorted (deterministic) order."""
+
         return sorted(self.hypotheses)
 
     def ordered(self) -> List[Hypothesis]:
@@ -190,18 +214,26 @@ class ResonantField:
         return [self.hypotheses[hid] for hid in self.ids()]
 
     def active(self) -> List[Hypothesis]:
+        """Return non-vetoed hypotheses, in stable order."""
+
         return [h for h in self.ordered() if not h.vetoed]
 
     def vectors(self) -> np.ndarray:
+        """Stack every hypothesis' vector into a ``(n, dim)`` array."""
+
         items = self.ordered()
         if not items:
             return np.zeros((0, self.dim))
         return np.stack([h.vector for h in items])
 
     def amplitudes(self) -> np.ndarray:
+        """Return the amplitude of every hypothesis, in stable order."""
+
         return np.array([h.amplitude for h in self.ordered()], dtype=float)
 
     def phases(self) -> np.ndarray:
+        """Return the phase of every hypothesis, in stable order."""
+
         return np.array([h.phase for h in self.ordered()], dtype=float)
 
     # --------------------------------------------------------------- readouts
@@ -616,6 +648,9 @@ class ResonantField:
         return dropped
 
     def snapshot(self) -> Dict[str, object]:
+        """Return a compact summary of the field's size, coherence,
+        labels, and vetoes."""
+
         return {
             "size": len(self.hypotheses),
             "coherence": self.coherence(),
