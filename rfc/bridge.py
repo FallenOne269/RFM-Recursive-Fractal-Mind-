@@ -91,6 +91,8 @@ def goal_alignment_invariant(
     target = normalize_vector(target)
 
     def predicate(hypothesis: Hypothesis, _context: Mapping[str, object]) -> bool:
+        """Return True if the hypothesis's claim is too far from the goal."""
+
         claim = normalize_vector(hypothesis.claim())
         if claim.size != target.size or not np.any(target):
             return False

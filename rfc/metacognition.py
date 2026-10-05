@@ -175,6 +175,8 @@ DEFAULT_POLICIES = DEFAULT_POLICIES + _band_trust_policies()
 
 @dataclass
 class MetaConfig:
+    """Tunable configuration for ``MetaResonator``."""
+
     window: int = 16
     min_episodes: int = 8
     time_levels: int = 3
@@ -189,6 +191,8 @@ class MetaConfig:
 
 @dataclass
 class MetaReport:
+    """The outcome of one reflection: what was applied, or why nothing was."""
+
     applied: Optional[str] = None
     rationale: str = ""
     confidence: float = 0.0
@@ -207,6 +211,8 @@ class MetaResonator:
         config: Optional[MetaConfig] = None,
         policies: Optional[Tuple[MetaPolicy, ...]] = None,
     ):
+        """Set up policies and rollback bookkeeping for reflection."""
+
         self.config = config or MetaConfig()
         self.policies = tuple(policies or DEFAULT_POLICIES)
         self.best_params: Optional[OperatorParams] = None
@@ -289,6 +295,9 @@ class MetaResonator:
     def reflect(
         self, telemetry: Telemetry, operator: ScaleInvariantOperator
     ) -> MetaReport:
+        """Resonate policies over recent telemetry and apply or
+        roll back a change."""
+
         config = self.config
         if len(telemetry) < config.min_episodes:
             return MetaReport(

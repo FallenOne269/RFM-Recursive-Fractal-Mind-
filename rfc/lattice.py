@@ -41,11 +41,15 @@ class Symbol:
     observations: int = 1
 
     def similarity(self, vector: np.ndarray) -> float:
+        """Cosine similarity between this symbol's vector and ``vector``."""
+
         return float(np.dot(self.vector, normalize_vector(vector)))
 
 
 @dataclass
 class LatticeConfig:
+    """Tunable thresholds governing crystallisation, merging, and decay."""
+
     crystallize_amplitude: float = 0.55
     crystallize_coherence: float = 0.7
     persistence: int = 3
@@ -60,6 +64,9 @@ class SymbolLattice:
     """Holds crystallised symbols and the partial order between them."""
 
     def __init__(self, config: Optional[LatticeConfig] = None):
+        """Start an empty lattice with no symbols or
+        crystallisation streaks."""
+
         self.config = config or LatticeConfig()
         self.symbols: Dict[str, Symbol] = {}
         self._streaks: Dict[str, int] = {}
@@ -67,11 +74,15 @@ class SymbolLattice:
 
     # ------------------------------------------------------------------ build
     def _next_id(self) -> str:
+        """Return a fresh, monotonically increasing symbol id."""
+
         self._counter += 1
         return f"sym{self._counter}"
 
     @staticmethod
     def _coalition_key(coalition: Coalition) -> str:
+        """A deterministic key identifying a coalition by its member ids."""
+
         return "|".join(sorted(coalition.members))
 
     def observe(self, field: ResonantField, step: int) -> List[Symbol]:
@@ -120,6 +131,9 @@ class SymbolLattice:
         return self.match(coalition.centroid, self.config.merge_similarity)
 
     def _crystallize(self, coalition: Coalition, step: int) -> Optional[Symbol]:
+        """Turn a resonant coalition into a new symbol, or
+        reinforce an existing one."""
+
         config = self.config
         existing = self._find_existing(coalition)
         if existing is not None:
@@ -170,6 +184,9 @@ class SymbolLattice:
 
     # ----------------------------------------------------------------- access
     def match(self, vector: np.ndarray, threshold: float) -> Optional[Symbol]:
+        """Return the most similar symbol to ``vector`` if it
+        clears ``threshold``."""
+
         unit = normalize_vector(vector)
         best: Optional[Symbol] = None
         best_score = threshold
@@ -212,6 +229,9 @@ class SymbolLattice:
         return removed
 
     def dissolve(self, sid: str) -> None:
+        """Remove the symbol ``sid``, reparenting its children
+        to its own parent."""
+
         symbol = self.symbols.pop(sid, None)
         if symbol is None:
             return
@@ -240,6 +260,8 @@ class SymbolLattice:
         return lines
 
     def snapshot(self) -> Dict[str, object]:
+        """Return a compact summary of symbol count, labels, and rules."""
+
         return {
             "count": len(self.symbols),
             "labels": sorted({s.label for s in self.symbols.values()}),

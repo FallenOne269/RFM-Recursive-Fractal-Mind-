@@ -18,6 +18,9 @@ from .tasks import format_report, make_composite, run_benchmark
 
 
 def _episode(args: argparse.Namespace) -> int:
+    """Run the ``episode`` subcommand: learn over the composite task
+    and report accuracy."""
+
     dataset = make_composite(args.seed, trials=args.episodes)
     invariants = []
     if args.forbid:
@@ -51,6 +54,9 @@ def _episode(args: argparse.Namespace) -> int:
 
 
 def _bench(args: argparse.Namespace) -> int:
+    """Run the ``bench`` subcommand: execute the benchmark suite and
+    print results."""
+
     results = run_benchmark(args.seed)
     if args.json:
         print(
@@ -74,6 +80,9 @@ def _bench(args: argparse.Namespace) -> int:
 
 
 def _demo(_args: argparse.Namespace) -> int:
+    """Run the ``demo`` subcommand: the narrated walkthrough plus
+    benchmarks."""
+
     from .demo import main as demo_main
 
     demo_main()
@@ -81,6 +90,9 @@ def _demo(_args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build the ``rfc`` argument parser with its ``episode``,
+    ``bench``, and ``demo`` subcommands."""
+
     parser = argparse.ArgumentParser(
         prog="rfc", description="Resonant Fractal Cognition"
     )
@@ -110,6 +122,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
+    """Parse arguments and dispatch to the selected subcommand."""
+
     parser = build_parser()
     args = parser.parse_args(argv)
     return int(args.func(args))

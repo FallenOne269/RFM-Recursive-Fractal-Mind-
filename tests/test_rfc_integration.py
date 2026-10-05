@@ -23,6 +23,9 @@ from rfc.tasks import (
 
 
 def test_rfai_motifs_become_evidence_vectors():
+    """Encoding data through an RFAI encoder should yield a
+    unit-norm evidence vector."""
+
     encoder = DynamicFractalEncoder()
     vector = encode_evidence(
         {"payload": 3}, encoder, np.array([0.4, 0.1, 0.9]), {"load": 0.2}, dim=32
@@ -32,12 +35,17 @@ def test_rfai_motifs_become_evidence_vectors():
 
 
 def test_the_same_motif_always_encodes_the_same_way():
+    """Encoding the same FIM twice must produce the same evidence vector."""
+
     encoder = DynamicFractalEncoder()
     fim = encoder.encode({"payload": 1}, np.array([0.2, 0.5]), {})
     np.testing.assert_allclose(evidence_from_fim(fim, 32), evidence_from_fim(fim, 32))
 
 
 def test_a_semantic_goal_becomes_an_enforced_invariant():
+    """A goal-alignment invariant should veto hypotheses
+    pointing away from the goal."""
+
     dim = 32
     rng = np.random.default_rng(0)
     wanted = rng.normal(size=dim)
@@ -52,6 +60,9 @@ def test_a_semantic_goal_becomes_an_enforced_invariant():
 
 
 def test_baselines_agree_with_themselves():
+    """Baseline matchers must be deterministic and only
+    predict known labels."""
+
     dataset = make_composite(0, trials=8)
     for matcher in (FlatMatcher(dataset.codebook), BandMatcher(dataset.codebook)):
         first = [matcher.predict(evidence) for evidence, _ in dataset.samples]
@@ -61,6 +72,8 @@ def test_baselines_agree_with_themselves():
 
 
 def test_greedy_pursuit_returns_distinct_labels():
+    """Greedy pursuit's top-k predictions must never repeat a label."""
+
     dataset = make_composite(0, trials=4)
     pursuit = GreedyPursuit(dataset.codebook)
     for evidence, _ in dataset.samples:
@@ -69,6 +82,9 @@ def test_greedy_pursuit_returns_distinct_labels():
 
 
 def test_safety_task_reports_a_clean_sheet():
+    """The guarded system must never emit the forbidden
+    label, unlike the unguarded one."""
+
     result = run_safety(3)
     assert result.scores["rfc-violation-rate"] == 0.0
     assert result.scores["rfc-unguarded-violation-rate"] > 0.5
@@ -76,6 +92,9 @@ def test_safety_task_reports_a_clean_sheet():
 
 
 def test_recursion_beats_its_own_ablation_on_superposition():
+    """Residual-recursion decomposition should outscore the
+    one-shot top-2 ablation."""
+
     result = run_superposition(1)
     assert result.scores["rfc-decompose"] > result.scores["rfc-one-shot-top2"]
 
@@ -89,17 +108,23 @@ def test_classification_stays_in_the_neighbourhood_of_the_baselines():
 
 
 def test_report_formatting_is_readable():
+    """The formatted report should include the task name and its score keys."""
+
     text = format_report([run_safety(3)])
     assert "safety" in text
     assert "rfc-violation-rate" in text
 
 
 def test_cli_runs_an_episode(capsys):
+    """The ``episode`` subcommand should run cleanly and print accuracy."""
+
     assert cli_main(["episode", "--seed", "0", "--episodes", "4"]) == 0
     assert "accuracy" in capsys.readouterr().out
 
 
 def test_cli_emits_json(capsys):
+    """The ``--json`` flag should emit valid, parseable state JSON."""
+
     import json
 
     assert cli_main(["episode", "--seed", "0", "--episodes", "3", "--json"]) == 0
@@ -108,6 +133,9 @@ def test_cli_emits_json(capsys):
 
 
 def test_cli_can_forbid_an_answer(capsys):
+    """The ``--forbid`` flag should prevent the banned label
+    from being printed as an answer."""
+
     dataset = make_composite(0, trials=1)
     banned = sorted(dataset.codebook)[0]
     assert (
@@ -144,6 +172,9 @@ def test_distrusting_the_corrupted_bands_recovers_accuracy():
     shift = int(dataset.extra["shift"])
 
     def post_shift(trust):
+        """Post-shift accuracy of a mind built with the given
+        ``band_trust`` override."""
+
         mind = _build_mind(dataset, 0, overrides={"band_trust": trust})
         hits = [
             mind.perceive(evidence).label == truth
