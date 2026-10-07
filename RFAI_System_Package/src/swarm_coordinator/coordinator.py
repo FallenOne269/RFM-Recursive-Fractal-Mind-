@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Sequence
+from typing import TYPE_CHECKING, Sequence
 
 import numpy as np
 
 from utils import SwarmCoordinatorConfig
+
+if TYPE_CHECKING:
+    from utils import PluginRegistry
 
 
 @dataclass(frozen=True)
