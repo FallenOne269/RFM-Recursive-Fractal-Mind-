@@ -115,6 +115,7 @@ engines and trigger test runs.
 | `run_rfai_scenario` | Run simulation A/B/C (or all) through AMIFS/DFE/RSA and return metrics |
 | `run_rfc_episode` | Run Resonant Fractal Cognition over the composite task (accuracy, last percept, explanation; optional forbidden labels) |
 | `run_orchestrator_cycle` | Run one `RFAISystem` cycle (fractal engine -> swarm -> quantum -> meta learner) on numeric input |
+| `ask_gemini` / `list_gemini_models` | Optional: send a free-form prompt to Google Gemini (external LLM, **not** RFM's engines; results carry `rfm_engines_used: false`) / list models the key can call |
 | `list_tests` | Collect pytest node ids |
 | `run_tests` | Run pytest (optional `target`, `-k` `keyword`, `timeout_seconds`); `wait=false` returns a `run_id` immediately |
 | `get_test_run` / `list_test_runs` | Poll a run or list recent runs with pass/fail counts, failure details and output tail |
@@ -127,6 +128,21 @@ pip install -r requirements.txt numpy
 python -m mcp_server                                            # stdio (local clients)
 python -m mcp_server --transport streamable-http --port 8000    # HTTP at /mcp, localhost only
 ```
+
+### Natural-language prompts via Gemini (optional)
+
+RFM's engines only take numeric/structured input, so `ask_gemini` forwards free-form prompts
+to Google Gemini instead. Answers are Gemini's reasoning, not RFM's. The key is read on the
+server at call time (no restart needed), sent only in the `x-goog-api-key` header, and never
+logged or returned. HTTP 429 (free-tier quota) is reported as an error; there is no paid fallback.
+
+```bash
+export GEMINI_API_KEY=...                        # or GEMINI_API_KEY_FILE=/path/to/0600-file
+export GEMINI_MODEL=gemini-3.8-flash             # optional; default gemini-3.8-flash
+```
+
+A key from a Google AI Studio project without billing stays on the free tier (rate-limited,
+and prompts may be used to improve Google's products). See https://ai.google.dev/gemini-api/docs/pricing.
 
 ### Remote access with OAuth (Sesame custom app)
 
@@ -161,6 +177,8 @@ If the client needs a pre-registered client ID/secret instead of dynamic registr
 | `RFM_MCP_OAUTH_PASSWORD` | required with OAuth | Operator password for the consent page |
 | `RFM_MCP_OAUTH_STATE_FILE` | in memory | JSON file (mode 0600) persisting clients and tokens |
 | `RFM_MCP_OAUTH_CLIENT_ID` / `_CLIENT_SECRET` / `_REDIRECT_URIS` | unset | Optional pre-registered client |
+| `GEMINI_API_KEY` / `GEMINI_API_KEY_FILE` | unset | Enables `ask_gemini` / `list_gemini_models` |
+| `GEMINI_MODEL` | `gemini-3.8-flash` | Default Gemini model |
 | `RFM_MCP_ACCESS_TOKEN_TTL` / `RFM_MCP_REFRESH_TOKEN_TTL` | `3600` / `2592000` | Token lifetimes (seconds) |
 
 Requests whose `Host` is neither the public host nor localhost are rejected (DNS-rebinding protection),

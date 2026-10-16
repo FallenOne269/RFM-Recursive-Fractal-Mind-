@@ -28,6 +28,7 @@ from starlette.responses import JSONResponse, Response
 
 from mcp_server.auth import LOGIN_PATH, SCOPE, OAuthSettings, RFMOAuthProvider
 from mcp_server.domain import register_domain_tools
+from mcp_server.gemini import register_gemini_tools
 from mcp_server.runs import PytestRunner, RunError
 
 DEFAULT_REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -355,6 +356,7 @@ def create_server(settings: Optional[Settings] = None) -> FastMCP:
         return {"runs": [r.to_dict() for r in runner.list(limit)]}
 
     register_domain_tools(mcp, settings.repo_root)
+    register_gemini_tools(mcp)
 
     return mcp
 

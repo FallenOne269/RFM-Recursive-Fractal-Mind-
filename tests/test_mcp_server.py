@@ -23,6 +23,8 @@ EXPECTED_TOOLS = {
     "run_rfai_scenario",
     "run_rfc_episode",
     "run_orchestrator_cycle",
+    "ask_gemini",
+    "list_gemini_models",
 }
 
 pytestmark = pytest.mark.anyio
