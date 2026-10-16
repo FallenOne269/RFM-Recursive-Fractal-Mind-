@@ -1,6 +1,5 @@
 import json
 import sys
-import textwrap
 from pathlib import Path
 
 import pytest
@@ -34,6 +33,17 @@ def anyio_backend():
     return "asyncio"
 
 
+SAMPLE_TESTS = (
+    "def test_pass():\n"
+    "    assert 1 + 1 == 2\n"
+    "\n"
+    "\n"
+    "def test_fail():\n"
+    '    assert 1 + 1 == 3, "math is broken"\n'
+)
+SLOW_TEST = "import time\n\n\ndef test_slow():\n    time.sleep(30)\n"
+
+
 @pytest.fixture
 def sample_project(tmp_path):
     """A tiny project with one passing, one failing and one slow test."""
@@ -45,27 +55,8 @@ def sample_project(tmp_path):
     )
     tests = tmp_path / "tests"
     tests.mkdir()
-    (tests / "test_sample.py").write_text(
-        textwrap.dedent(
-            """
-        def test_pass():
-            assert 1 + 1 == 2
-
-        def test_fail():
-            assert 1 + 1 == 3, "math is broken"
-    """
-        )
-    )
-    (tests / "test_slow.py").write_text(
-        textwrap.dedent(
-            """
-        import time
-
-        def test_slow():
-            time.sleep(30)
-    """
-        )
-    )
+    (tests / "test_sample.py").write_text(SAMPLE_TESTS)
+    (tests / "test_slow.py").write_text(SLOW_TEST)
     return tmp_path
 
 
