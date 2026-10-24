@@ -9,12 +9,18 @@ import sys
 import tempfile
 import time
 import uuid
-import xml.etree.ElementTree as ET
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
+
+# defusedxml ships no type hints (stubs are the separate types-defusedxml).
+from defusedxml import DefusedXmlException  # type: ignore[import-untyped]
+from defusedxml.ElementTree import (  # type: ignore[import-untyped]
+    ParseError,
+)
+from defusedxml.ElementTree import parse as parse_xml_safely
 
 OUTPUT_TAIL_CHARS = 12_000
 
@@ -28,8 +34,18 @@ PYTEST_EXIT_STATUS = {
 }
 
 
+# A JUnit report bigger than this is not parsed (pytest's own reports for this
+# repository are a few hundred KiB).
+MAX_JUNIT_BYTES = 32 * 1024 * 1024
+JUNIT_ROOT_TAGS = ("testsuites", "testsuite")
+
+
 class RunError(Exception):
     """Raised when a test run cannot be started or found."""
+
+
+class JUnitReportError(Exception):
+    """The JUnit XML report could not be read safely."""
 
 
 def _now() -> str:
@@ -51,6 +67,7 @@ class RunRecord:
     summary: dict[str, int] = field(default_factory=dict)
     failures: list[dict[str, str]] = field(default_factory=list)
     output: str = ""
+    report_error: Optional[str] = None
 
     def to_dict(self, include_output: bool = False) -> dict[str, Any]:
         data: dict[str, Any] = {
@@ -66,6 +83,7 @@ class RunRecord:
             "exit_code": self.exit_code,
             "summary": self.summary,
             "failures": self.failures,
+            "report_error": self.report_error,
         }
         if include_output:
             data["output"] = self.output[-OUTPUT_TAIL_CHARS:]
@@ -73,10 +91,30 @@ class RunRecord:
 
 
 def parse_junit(path: Path) -> tuple[dict[str, int], list[dict[str, str]]]:
-    """Return (summary counts, failure details) from a pytest JUnit XML report."""
+    """Return (summary counts, failure details) from a pytest JUnit XML report.
+
+    Returns empty results when there is no report. Raises JUnitReportError for a
+    report that is too large, not well-formed, or uses XML features that can be
+    abused (entity declarations, external entities, DTD tricks); defusedxml
+    refuses those before any expansion happens.
+    """
     if not path.is_file():
         return {}, []
-    root = ET.parse(path).getroot()
+    size = path.stat().st_size
+    if size > MAX_JUNIT_BYTES:
+        raise JUnitReportError(
+            f"JUnit report is {size} bytes, over the {MAX_JUNIT_BYTES} byte limit"
+        )
+    try:
+        root = parse_xml_safely(path).getroot()
+    except DefusedXmlException as exc:
+        raise JUnitReportError(
+            f"JUnit report refused as unsafe XML ({type(exc).__name__}: {exc})"
+        ) from None
+    except ParseError as exc:
+        raise JUnitReportError(f"JUnit report is not well-formed XML: {exc}") from None
+    if root.tag not in JUNIT_ROOT_TAGS:
+        raise JUnitReportError(f"JUnit report has unexpected root element <{root.tag}>")
     counts = {"total": 0, "passed": 0, "failed": 0, "errors": 0, "skipped": 0}
     failures: list[dict[str, str]] = []
     for case in root.iter("testcase"):
@@ -254,7 +292,14 @@ class PytestRunner:
                     await proc.wait()
                     record.status = "timeout"
             record.output = log_path.read_text(errors="replace")[-OUTPUT_TAIL_CHARS:]
-            record.summary, record.failures = parse_junit(junit)
+            try:
+                record.summary, record.failures = parse_junit(junit)
+            except JUnitReportError as exc:
+                # Keep the status pytest's exit code gave; say why counts are missing.
+                record.report_error = str(exc)
+            else:
+                if not record.summary and record.status in ("passed", "failed"):
+                    record.report_error = "pytest finished but wrote no JUnit report"
         except (
             Exception
         ) as exc:  # noqa: BLE001 - surface any launcher failure to the client
