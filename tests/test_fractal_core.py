@@ -13,4 +13,3 @@ def test_self_improve_changes_parameters():
     initial_gain = algo.transform_gain
     algo.self_improve({"performance": 0.2})
     assert algo.transform_gain != initial_gain
-

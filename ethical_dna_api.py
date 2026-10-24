@@ -1,9 +1,12 @@
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
-from typing import List, Dict, Optional
+from typing import Any, List, Dict, Optional
 from enum import Enum
 import asyncio
+import hmac
+import os
 
 class ActionType(str, Enum):
     CREATE = "create"
@@ -25,7 +28,7 @@ class ActionProposal(BaseModel):
     action_type: ActionType
     description: str
     target_system: str
-    parameters: Dict[str, any]
+    parameters: Dict[str, Any]
     urgency_level: int = Field(ge=1, le=5)
     reversibility: bool
 
@@ -45,7 +48,7 @@ class ValueSystem(BaseModel):
 
 class EthicalDNARequest(BaseModel):
     action_proposal: ActionProposal
-    context_data: Dict[str, any]
+    context_data: Dict[str, Any]
     stakeholder_impact: List[StakeholderImpact]
     value_system: ValueSystem
 
@@ -70,6 +73,24 @@ class EthicalDNAResponse(BaseModel):
     value_alignment_score: float
     reasoning_chain: List[str]
     confidence_level: float
+
+app = FastAPI(title="Ethical DNA API", version="1.0.0")
+security = HTTPBearer()
+
+async def verify_fractal_token(
+    credentials: HTTPAuthorizationCredentials = Security(security),
+) -> dict:
+    """Check the bearer token against ETHICAL_DNA_API_TOKEN.
+
+    Fails closed: with no token configured every request is refused. JWT and
+    fractal-signature validation are not implemented.
+    """
+    expected = os.environ.get("ETHICAL_DNA_API_TOKEN", "")
+    if not expected:
+        raise HTTPException(status_code=503, detail="API token is not configured")
+    if not hmac.compare_digest(credentials.credentials.encode(), expected.encode()):
+        raise HTTPException(status_code=401, detail="Invalid authentication token")
+    return {"subject": "ethical-dna-client"}
 
 @app.post("/api/v1/ethical/dna", response_model=EthicalDNAResponse)
 async def evaluate_ethical_dna(
@@ -160,6 +181,31 @@ async def evaluate_autonomy_respect(request: EthicalDNARequest) -> float:
     consent_level = 0.7  # Would be determined from context
 
     return (agency_preservation + consent_level) / 2
+
+async def evaluate_fairness(request: EthicalDNARequest) -> float:
+    """Evaluate how evenly impacts are distributed across stakeholders"""
+    if not request.stakeholder_impact:
+        return 1.0
+
+    magnitudes = [impact.impact_magnitude for impact in request.stakeholder_impact]
+    spread = max(magnitudes) - min(magnitudes)
+    return max(0.0, 1.0 - spread / 2)
+
+async def evaluate_transparency(request: EthicalDNARequest) -> float:
+    """Evaluate how well the action and its impacts are described"""
+    if not request.action_proposal.description:
+        return 0.0
+    if not request.stakeholder_impact:
+        return 0.5
+
+    return sum(impact.confidence for impact in request.stakeholder_impact) / len(request.stakeholder_impact)
+
+async def evaluate_accountability(request: EthicalDNARequest) -> float:
+    """Evaluate whether the action can be audited and undone"""
+    score = 0.6 if request.action_proposal.reversibility else 0.3
+    if request.action_proposal.action_type != ActionType.MODIFY_SYSTEM:
+        score += 0.2
+    return min(1.0, score)
 
 async def generate_alternative_actions(
     request: EthicalDNARequest, 

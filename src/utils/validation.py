@@ -67,7 +67,9 @@ def _coerce_sequence(values: Any) -> Sequence[float]:
     if isinstance(values, (bytes, bytearray)):
         raise ValueError("Binary payloads are not supported")
     if isinstance(values, str):
-        raise ValueError("String payloads are not supported; provide a numeric sequence")
+        raise ValueError(
+            "String payloads are not supported; provide a numeric sequence"
+        )
     if isinstance(values, (int, float)):
         return (float(values),)
     if isinstance(values, Sequence):

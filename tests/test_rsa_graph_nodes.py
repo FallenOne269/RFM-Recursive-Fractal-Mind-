@@ -47,4 +47,3 @@ def test_propagation():
     graph.add_node(child, parent_id="root")
     visited = graph.propagate(AdaptationSignal(delta=0.1, reason="test"), "root")
     assert ("root",) == visited[0][:1]
-
