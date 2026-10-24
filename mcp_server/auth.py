@@ -23,7 +23,7 @@ import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Optional
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 from mcp.server.auth.provider import (
     AccessToken,
@@ -54,6 +54,48 @@ def _hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
+# Hosts where plain HTTP is accepted for local development. Kept to the two hosts
+# the MCP SDK's own issuer check also accepts, so a URL that passes here cannot be
+# refused later at start-up (the SDK refuses http://[::1] and http://127.0.0.2).
+LOCAL_DEV_HTTP_HOSTS = frozenset({"localhost", "127.0.0.1"})
+
+
+def validate_public_url(public_url: str) -> None:
+    """Raise ValueError unless *public_url* is safe to use as the OAuth issuer.
+
+    Tokens and the operator password travel over this URL, so it must be HTTPS.
+    Plain HTTP is accepted only for local development on ``localhost`` or
+    ``127.0.0.1``, which never leave the machine.
+    """
+    if public_url != public_url.strip():
+        raise ValueError("RFM_MCP_PUBLIC_URL must not contain surrounding whitespace")
+    try:
+        parts = urlsplit(public_url)
+        host = parts.hostname
+        _ = parts.port  # raises ValueError for a malformed port
+    except ValueError as exc:
+        raise ValueError(f"RFM_MCP_PUBLIC_URL is not a valid URL: {exc}") from None
+    scheme = parts.scheme.lower()
+    if scheme not in ("https", "http"):
+        raise ValueError(
+            "RFM_MCP_PUBLIC_URL must be an https:// URL (got "
+            f"{public_url!r}); plain http is allowed only on localhost"
+        )
+    if not host:
+        raise ValueError("RFM_MCP_PUBLIC_URL must include a host name")
+    if parts.username is not None or parts.password is not None:
+        raise ValueError("RFM_MCP_PUBLIC_URL must not contain credentials")
+    if parts.query:
+        raise ValueError("RFM_MCP_PUBLIC_URL must not contain a query string")
+    if parts.fragment or public_url.endswith("#"):
+        raise ValueError("RFM_MCP_PUBLIC_URL must not contain a fragment")
+    if scheme == "http" and host not in LOCAL_DEV_HTTP_HOSTS:
+        raise ValueError(
+            f"RFM_MCP_PUBLIC_URL must use https for host {host!r}; "
+            "plain http is allowed only for localhost or 127.0.0.1"
+        )
+
+
 @dataclass
 class OAuthSettings:
     public_url: str
@@ -64,6 +106,9 @@ class OAuthSettings:
     static_client_id: Optional[str] = None
     static_client_secret: Optional[str] = None
     static_redirect_uris: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        validate_public_url(self.public_url)
 
     @property
     def issuer_url(self) -> str:
@@ -77,6 +122,7 @@ class OAuthSettings:
     def from_env(cls, public_url: Optional[str]) -> "OAuthSettings":
         if not public_url:
             raise ValueError("RFM_MCP_PUBLIC_URL is required when OAuth is enabled")
+        validate_public_url(public_url)
         password = os.environ.get("RFM_MCP_OAUTH_PASSWORD", "")
         if len(password) < 12:
             raise ValueError(
@@ -330,6 +376,7 @@ class RFMOAuthProvider(
     def _issue(
         self, client_id: str, scopes: list[str], resource: Optional[str]
     ) -> OAuthToken:
+        self._prune_expired()
         now = int(time.time())
         access, refresh = secrets.token_urlsafe(32), secrets.token_urlsafe(48)
         ah, rh = _hash(access), _hash(refresh)
@@ -358,18 +405,26 @@ class RFMOAuthProvider(
         )
 
     def _grant(self, token: str, kind: str) -> Optional[_Grant]:
-        grant = self.grants.get(_hash(token))
+        token_hash = _hash(token)
+        grant = self.grants.get(token_hash)
         if grant is None or grant.kind != kind:
             return None
-        if grant.expires_at and grant.expires_at < time.time():
-            self._drop(_hash(token))
+        if _expired(grant):
+            # Natural expiry removes only this token. An access token always
+            # expires long before its refresh token, and the refresh token must
+            # keep working so the client can get a new access token.
+            self.grants.pop(token_hash, None)
             return None
         return grant
 
-    def _drop(self, token_hash: str) -> None:
+    def _revoke_pair(self, token_hash: str) -> None:
+        """Remove a token and the sibling issued with it (revocation/rotation)."""
         grant = self.grants.pop(token_hash, None)
         if grant:
             self.grants.pop(grant.pair, None)
+
+    def _prune_expired(self) -> None:
+        self.grants = {h: g for h, g in self.grants.items() if not _expired(g)}
 
     async def load_refresh_token(
         self, client: OAuthClientInformationFull, refresh_token: str
@@ -392,9 +447,22 @@ class RFMOAuthProvider(
         refresh_token: RefreshToken,
         scopes: list[str],
     ) -> OAuthToken:
-        self._drop(
-            _hash(refresh_token.token)
-        )  # rotate: old refresh + access become invalid
+        # Re-check under the event loop: two concurrent requests can both pass
+        # load_refresh_token, but a refresh token may be exchanged only once.
+        token_hash = _hash(refresh_token.token)
+        grant = self.grants.get(token_hash)
+        if (
+            grant is None
+            or grant.kind != "refresh"
+            or grant.client_id != client.client_id
+            or _expired(grant)
+        ):
+            raise TokenError(
+                error="invalid_grant",
+                error_description="refresh token is no longer valid",
+            )
+        # Rotate: the old refresh token and its access token stop working.
+        self._revoke_pair(token_hash)
         return self._issue(
             refresh_token.client_id,
             scopes or refresh_token.scopes,
@@ -415,8 +483,13 @@ class RFMOAuthProvider(
         )
 
     async def revoke_token(self, token: AccessToken | RefreshToken) -> None:
-        self._drop(_hash(token.token))
+        self._revoke_pair(_hash(token.token))
         self._save_state()
+
+
+def _expired(grant: _Grant) -> bool:
+    expires_at = grant.expires_at
+    return expires_at is not None and 0 < expires_at < time.time()
 
 
 def _same_url(a: str, b: str) -> bool:
