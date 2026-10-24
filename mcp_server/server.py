@@ -47,7 +47,13 @@ EXCLUDED_DIRS = {
     ".vscode",
 }
 SECRET_FILE_PATTERNS = (".env", ".env.*", "*.pem", "*.key", "id_rsa*")
+# read_file never holds more than about MAX_READ_BYTES + READ_CHUNK_BYTES of a file
+# in memory and never returns more than MAX_READ_LINES lines / MAX_READ_BYTES bytes.
 MAX_READ_BYTES = 256 * 1024
+MAX_READ_LINES = 2000
+READ_CHUNK_BYTES = 64 * 1024
+# total_lines is counted (streaming) only for files up to this size.
+MAX_LINE_COUNT_BYTES = 16 * 1024 * 1024
 MAX_SEARCH_FILE_BYTES = 1024 * 1024
 
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
@@ -72,6 +78,113 @@ processor, meta learner).
 
 def _env_flag(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+class LineRangeError(ValueError):
+    """The requested line range is invalid for the file."""
+
+
+@dataclass
+class LineWindow:
+    lines: list[str]
+    start_line: int
+    end_line: int  # last line returned; start_line - 1 when nothing was returned
+    total_lines: Optional[int]  # None when the file was too large to count
+    truncated: bool  # the requested range was cut short by a limit
+    line_truncated: bool  # the last returned line was cut at the byte limit
+
+
+def read_line_window(
+    path: Path,
+    start_line: int = 1,
+    end_line: Optional[int] = None,
+    *,
+    max_lines: int = MAX_READ_LINES,
+    max_bytes: int = MAX_READ_BYTES,
+    count_limit: int = MAX_LINE_COUNT_BYTES,
+) -> LineWindow:
+    """Stream lines ``start_line..end_line`` (1-based, inclusive) out of *path*.
+
+    The file is read in bounded pieces, so memory stays near ``max_bytes`` no
+    matter how large the file or how long a single line is. At most ``max_lines``
+    lines and ``max_bytes`` bytes are returned; ``truncated`` says the range was
+    cut short. Lines are split on ``\\n`` with a trailing ``\\r`` removed.
+    """
+    if start_line < 1:
+        raise LineRangeError(f"start_line must be >= 1 (got {start_line})")
+    if end_line is not None and end_line < start_line:
+        raise LineRangeError(
+            f"end_line ({end_line}) must be >= start_line ({start_line})"
+        )
+    last_wanted = start_line + max_lines - 1
+    if end_line is not None:
+        last_wanted = min(last_wanted, end_line)
+
+    out: list[bytes] = []
+    used = 0  # bytes already placed in `out`
+    current = bytearray()  # the in-range line being read
+    lineno = 0  # number of the line currently being read
+    at_line_start = True
+    collecting = True
+    truncated = line_truncated = False
+    reached_eof = False
+
+    def finish_line() -> None:
+        nonlocal used, current
+        out.append(bytes(current))
+        used += len(current)
+        current = bytearray()
+
+    file_size = path.stat().st_size
+    with path.open("rb") as fh:
+        while True:
+            if not collecting and file_size > count_limit:
+                break  # do not scan the rest of a huge file only to count lines
+            piece = fh.readline(READ_CHUNK_BYTES)
+            if not piece:
+                reached_eof = True
+                break
+            if at_line_start:
+                lineno += 1
+                if collecting and lineno > last_wanted:
+                    collecting = False
+                    # More lines exist beyond the ones returned.
+                    truncated = end_line is None or end_line > last_wanted
+            ends_line = piece.endswith(b"\n")
+            if collecting and lineno >= start_line:
+                room = max_bytes - used - len(current)
+                if len(piece) > room:
+                    if out:
+                        current = bytearray()  # return whole lines only
+                    else:
+                        current += piece[:room]  # one line longer than the cap
+                        finish_line()
+                        line_truncated = True
+                    collecting = False
+                    truncated = True
+                else:
+                    current += piece
+                    if ends_line:
+                        finish_line()
+            at_line_start = ends_line
+
+    if collecting and current:
+        finish_line()  # last line of a file without a trailing newline
+
+    if reached_eof and start_line > max(lineno, 1):
+        raise LineRangeError(
+            f"start_line {start_line} is past the end of the file ({lineno} lines)"
+        )
+
+    lines = [line.rstrip(b"\n").removesuffix(b"\r") for line in out]
+    return LineWindow(
+        lines=[line.decode(errors="replace") for line in lines],
+        start_line=start_line,
+        end_line=start_line + len(lines) - 1,
+        total_lines=lineno if reached_eof else None,
+        truncated=truncated,
+        line_truncated=line_truncated,
+    )
 
 
 @dataclass
@@ -230,27 +343,27 @@ def create_server(settings: Optional[Settings] = None) -> FastMCP:
         path: str, start_line: int = 1, end_line: Optional[int] = None
     ) -> dict[str, Any]:
         """Read a text file from the repository, optionally limited to a 1-based
-        inclusive line range."""
+        inclusive line range. Returns at most 2000 lines / 256 KiB per call; when
+        `truncated` is true, call again with `start_line=next_start_line`."""
         target = repo.resolve(path)
         if not target.is_file():
             raise ToolError(f"{path!r} is not a file")
-        if target.stat().st_size > MAX_READ_BYTES and end_line is None:
-            raise ToolError(
-                f"{path!r} is larger than {MAX_READ_BYTES} bytes; "
-                "pass start_line/end_line"
-            )
-        raw = target.read_bytes()
-        if b"\0" in raw[:8192]:
-            raise ToolError(f"{path!r} looks like a binary file")
-        lines = raw.decode(errors="replace").splitlines()
-        start = max(start_line, 1)
-        end = len(lines) if end_line is None else min(end_line, len(lines))
+        with target.open("rb") as fh:
+            if b"\0" in fh.read(8192):
+                raise ToolError(f"{path!r} looks like a binary file")
+        try:
+            window = read_line_window(target, start_line, end_line)
+        except LineRangeError as exc:
+            raise ToolError(f"{path!r}: {exc}") from None
         return {
             "path": repo.rel(target),
-            "start_line": start,
-            "end_line": end,
-            "total_lines": len(lines),
-            "content": "\n".join(lines[start - 1 : end]),
+            "start_line": window.start_line,
+            "end_line": window.end_line,
+            "total_lines": window.total_lines,
+            "content": "\n".join(window.lines),
+            "truncated": window.truncated,
+            "line_truncated": window.line_truncated,
+            "next_start_line": window.end_line + 1 if window.truncated else None,
         }
 
     @mcp.tool(annotations=READ_ONLY)
