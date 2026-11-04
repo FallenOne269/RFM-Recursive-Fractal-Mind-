@@ -42,6 +42,9 @@ class ScaleBand:
     energy: float
 
     def unit(self) -> np.ndarray:
+        """Return this band's vector normalized to unit length
+        (zeros if negligible)."""
+
         norm = float(np.linalg.norm(self.vector))
         if norm <= 1e-12:
             return np.zeros_like(self.vector)
@@ -49,6 +52,8 @@ class ScaleBand:
 
 
 def _next_pow2(n: int) -> int:
+    """Return the smallest power of two that is ``>= n``."""
+
     return 1 if n <= 1 else 1 << (n - 1).bit_length()
 
 
@@ -121,6 +126,9 @@ def temporal_bands(
     total = rows.shape[0]
 
     def window_mean(count: int) -> np.ndarray:
+        """Mean of the most recent ``count`` rows (clamped to
+        the available range)."""
+
         count = max(1, min(total, count))
         return rows[-count:].mean(axis=0)
 

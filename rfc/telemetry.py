@@ -72,6 +72,9 @@ class EpisodeRecord:
         target_veto_rate: float = 0.1,
         reward_baseline: float = 0.5,
     ) -> np.ndarray:
+        """Signed deviation features for this episode, for
+        metacognition to resonate with."""
+
         depth_saturation = self.depth_used / max(1, self.max_depth)
         veto_rate = self.vetoes / max(1, self.field_size)
         field_pressure = self.field_size / max(1, self.max_field_size)
@@ -157,6 +160,8 @@ class EpisodeRecord:
         return credit
 
     def as_dict(self) -> Dict[str, object]:
+        """Return this record as a plain dict."""
+
         return asdict(self)
 
 
@@ -164,21 +169,32 @@ class Telemetry:
     """Bounded episode history plus summary statistics."""
 
     def __init__(self, maxlen: int = 256):
+        """Create an empty bounded history holding at most
+        ``maxlen`` episodes."""
+
         self.records: Deque[EpisodeRecord] = deque(maxlen=maxlen)
 
     def add(self, record: EpisodeRecord) -> EpisodeRecord:
+        """Append ``record`` to the history."""
+
         self.records.append(record)
         return record
 
     def __len__(self) -> int:
+        """Return the number of stored episode records."""
+
         return len(self.records)
 
     def recent(self, count: int) -> List[EpisodeRecord]:
+        """Return the most recent ``count`` records, oldest first."""
+
         if count <= 0:
             return []
         return list(self.records)[-count:]
 
     def feature_matrix(self, count: int) -> np.ndarray:
+        """Stack the feature vectors of the most recent ``count`` episodes."""
+
         baseline = self.mean_reward(count * 4)
         rows = [
             record.features(reward_baseline=baseline) for record in self.recent(count)
@@ -188,12 +204,17 @@ class Telemetry:
         return np.stack(rows)
 
     def mean_reward(self, count: int) -> float:
+        """Average reward over the last ``count`` episodes, or
+        0.5 if none recorded one."""
+
         rewards = [r.reward for r in self.recent(count) if r.reward is not None]
         if not rewards:
             return 0.5
         return float(np.mean(rewards))
 
     def summary(self, count: int = 32) -> Dict[str, float]:
+        """Return summary statistics over the last ``count`` episodes."""
+
         records = self.recent(count)
         if not records:
             return {}

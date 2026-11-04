@@ -122,6 +122,9 @@ class OperatorParams:
         return replace(self, band_trust=tuple(trust))
 
     def as_dict(self) -> Dict[str, float]:
+        """Return the tunable parameters, plus any per-band trust
+        entries, as a dict."""
+
         values = {name: float(getattr(self, name)) for name in TUNABLE_PARAMETERS}
         for level, trust in enumerate(self.band_trust):
             values[f"band_trust_{level}"] = float(trust)
@@ -130,6 +133,8 @@ class OperatorParams:
 
 @dataclass
 class StepReport:
+    """Diagnostics produced by a single ``ScaleInvariantOperator`` step."""
+
     step: int
     coherence: float
     mean_amplitude: float
@@ -144,6 +149,8 @@ class ScaleInvariantOperator:
     """One application of ``Psi``.  Stateless apart from its parameters."""
 
     def __init__(self, params: Optional[OperatorParams] = None):
+        """Store the physics parameters this operator will apply."""
+
         self.params = params or OperatorParams()
 
     # ------------------------------------------------------------------ utils
@@ -163,6 +170,9 @@ class ScaleInvariantOperator:
         context: Optional[Mapping[str, object]] = None,
         priors: Optional[Mapping[str, float]] = None,
     ) -> StepReport:
+        """Advance every hypothesis in ``field`` by one tick: drive,
+        couple, constrain, prune."""
+
         params = self.params
         items = field.ordered()
         if not items:
@@ -309,6 +319,8 @@ class ScaleInvariantOperator:
         )
 
     def natural_frequency_vector(self, scales: np.ndarray) -> np.ndarray:
+        """Vectorised ``natural_frequency`` over an array of scales."""
+
         return self.params.base_frequency * (2.0 ** -scales.astype(float))
 
     def run(

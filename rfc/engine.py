@@ -48,6 +48,8 @@ def _band_pivotal(field: ResonantField, answer: str) -> Tuple[float, ...]:
 
 @dataclass
 class RFCConfig:
+    """Tunable configuration for a ``ResonantFractalCognition`` instance."""
+
     dim: int = 32
     levels: int = 4
     steps: int = 24
@@ -89,6 +91,8 @@ class Percept:
     trace: List[Dict[str, Any]] = dataclass_field(default_factory=list)
 
     def as_dict(self) -> Dict[str, Any]:
+        """Return a JSON-friendly summary of the percept."""
+
         return {
             "label": self.label,
             "confidence": self.confidence,
@@ -104,6 +108,8 @@ class Percept:
 
 @dataclass
 class _Outcome:
+    """Internal bundle of everything ``_resolve`` produced for one episode."""
+
     field: ResonantField
     labels: Dict[str, float]
     coherence: float
@@ -123,6 +129,9 @@ class ResonantFractalCognition:
         codebook: Optional[Mapping[str, Sequence[float]]] = None,
         invariants: Optional[Sequence[Invariant]] = None,
     ):
+        """Assemble the operator, lattice, constraints, and telemetry; seed
+        the codebook."""
+
         self.config = config or RFCConfig()
         self.operator = ScaleInvariantOperator(self.config.params)
         self.lattice = SymbolLattice(self.config.lattice)
@@ -156,10 +165,15 @@ class ResonantFractalCognition:
         ]
 
     def add_invariant(self, invariant: Invariant) -> None:
+        """Register an additional invariant with the constraint field."""
+
         self.constraints.add(invariant)
 
     # ----------------------------------------------------------------- seeding
     def _seed_field(self, bands, depth: int) -> ResonantField:
+        """Spawn concept and exploratory hypotheses across scale bands for
+        a new field."""
+
         config = self.config
         field = ResonantField(config.dim, max_size=config.max_field_size)
         index = 0
@@ -216,6 +230,9 @@ class ResonantFractalCognition:
     def _resolve(
         self, evidence: np.ndarray, depth: int, context: Mapping[str, Any]
     ) -> _Outcome:
+        """Run the operator over ``evidence``, recursing on the residual
+        if it stays ambiguous."""
+
         config = self.config
         bands = dyadic_decompose(evidence, config.levels)
         field = self._seed_field(bands, depth)
@@ -223,6 +240,9 @@ class ResonantFractalCognition:
         is_root = depth == 0
 
         def observe(active_field: ResonantField, report: StepReport) -> None:
+            """Feed the symbol lattice and record a trace entry for the
+            root episode."""
+
             if is_root:
                 self.lattice.observe(active_field, self._step_clock)
                 self._step_clock += 1
@@ -461,6 +481,9 @@ class ResonantFractalCognition:
         return "\n".join(lines)
 
     def state(self) -> Dict[str, Any]:
+        """Return a snapshot of episodes, params, lattice, telemetry,
+        concepts, and invariants."""
+
         return {
             "episodes": self.episode,
             "params": self.operator.params.as_dict(),

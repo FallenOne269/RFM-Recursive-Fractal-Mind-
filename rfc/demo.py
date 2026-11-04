@@ -67,6 +67,8 @@ def decomposition_demo(seed: int = 5) -> None:
 
 
 def main() -> None:
+    """Run the walkthrough, the decomposition demo, and the benchmarks."""
+
     walkthrough()
     decomposition_demo()
     print("\n" + "=" * 72)

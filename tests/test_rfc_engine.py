@@ -21,6 +21,8 @@ from rfc.tasks import make_composite, make_superposition
 
 
 def _codebook(count: int = 4, dim: int = 64, seed: int = 0):
+    """Build a small codebook of random unit-norm concept vectors."""
+
     rng = np.random.default_rng(seed)
     return {
         chr(ord("a") + index): normalize_vector(rng.normal(size=dim))
@@ -29,12 +31,17 @@ def _codebook(count: int = 4, dim: int = 64, seed: int = 0):
 
 
 def _mind(dim: int = 64, seed: int = 0, **kwargs) -> ResonantFractalCognition:
+    """Build a ``ResonantFractalCognition`` over a random codebook."""
+
     return ResonantFractalCognition(
         RFCConfig(dim=dim, seed=seed, **kwargs), codebook=_codebook(dim=dim)
     )
 
 
 def test_perceive_recovers_the_generating_concept():
+    """Noisy evidence from a known concept should be
+    labelled as that concept."""
+
     codebook = _codebook()
     mind = ResonantFractalCognition(RFCConfig(dim=64, seed=0), codebook=codebook)
     rng = np.random.default_rng(1)
@@ -45,6 +52,8 @@ def test_perceive_recovers_the_generating_concept():
 
 
 def test_identical_seeds_give_identical_episodes():
+    """Two runs with the same seed must produce identical episode outcomes."""
+
     rng = np.random.default_rng(7)
     evidence = [rng.normal(size=64) for _ in range(5)]
     runs = []
@@ -60,6 +69,8 @@ def test_identical_seeds_give_identical_episodes():
 
 
 def test_probabilities_are_a_distribution():
+    """Percept alternatives must be non-negative and sum to one."""
+
     mind = _mind()
     percept = mind.perceive(np.random.default_rng(2).normal(size=64))
     assert percept.alternatives
@@ -68,6 +79,9 @@ def test_probabilities_are_a_distribution():
 
 
 def test_evidence_of_the_wrong_size_is_rejected():
+    """Evidence or concept vectors of the wrong dimension
+    raise ``ValueError``."""
+
     mind = _mind()
     with pytest.raises(ValueError):
         mind.perceive(np.zeros(7))
@@ -76,6 +90,9 @@ def test_evidence_of_the_wrong_size_is_rejected():
 
 
 def test_recursion_only_fires_when_the_field_cannot_choose():
+    """Recursion should stay at depth 0 when decisive and
+    recurse when ambiguous."""
+
     codebook = _codebook()
     decisive = ResonantFractalCognition(
         RFCConfig(dim=64, seed=0, ambiguity_threshold=0.0), codebook=codebook
@@ -89,6 +106,8 @@ def test_recursion_only_fires_when_the_field_cannot_choose():
 
 
 def test_recursion_depth_is_capped():
+    """Recursion depth must never exceed ``max_depth``."""
+
     codebook = _codebook()
     mind = ResonantFractalCognition(
         RFCConfig(dim=64, seed=0, ambiguity_threshold=1.0, max_depth=2),
@@ -99,6 +118,8 @@ def test_recursion_depth_is_capped():
 
 
 def test_decompose_names_both_sources():
+    """Decomposition should recover both source labels for most mixtures."""
+
     dataset = make_superposition(1, trials=12)
     mind = ResonantFractalCognition(
         RFCConfig(dim=dataset.dim, seed=1), codebook=dataset.codebook
@@ -110,6 +131,8 @@ def test_decompose_names_both_sources():
 
 
 def test_decompose_does_not_repeat_itself():
+    """Decomposition must not return the same label more than once."""
+
     codebook = _codebook()
     mind = ResonantFractalCognition(RFCConfig(dim=64, seed=0), codebook=codebook)
     found = mind.decompose(codebook["a"] + codebook["c"], 3)
@@ -117,6 +140,8 @@ def test_decompose_does_not_repeat_itself():
 
 
 def test_symbols_crystallise_and_carry_provenance():
+    """Crystallised symbols must carry a known label, support, and scales."""
+
     dataset = make_composite(0, trials=12)
     mind = ResonantFractalCognition(
         RFCConfig(dim=dataset.dim, seed=0), codebook=dataset.codebook
@@ -132,6 +157,8 @@ def test_symbols_crystallise_and_carry_provenance():
 
 
 def test_one_symbol_per_claim():
+    """Each distinct claim should crystallise into exactly one symbol."""
+
     dataset = make_composite(0, trials=20)
     mind = ResonantFractalCognition(
         RFCConfig(dim=dataset.dim, seed=0), codebook=dataset.codebook
@@ -143,6 +170,8 @@ def test_one_symbol_per_claim():
 
 
 def test_unsupported_symbols_dissolve():
+    """Symbols the world stops supporting should decay and dissolve."""
+
     dataset = make_composite(0, trials=6)
     config = RFCConfig(
         dim=dataset.dim, seed=0, lattice=LatticeConfig(decay=0.5, dissolve_strength=0.5)
@@ -156,6 +185,9 @@ def test_unsupported_symbols_dissolve():
 
 
 def test_a_vetoed_answer_is_never_returned():
+    """A forbidden label must never be returned as the
+    answer, even if it is true."""
+
     dataset = make_composite(0, trials=20)
     banned = sorted(dataset.codebook)[0]
     mind = ResonantFractalCognition(
@@ -204,6 +236,9 @@ def test_veto_makes_amplitude_non_increasing():
 
 
 def test_direction_invariant_blocks_a_forbidden_region():
+    """A forbidden-direction invariant should stop that
+    concept from being chosen."""
+
     codebook = _codebook()
     mind = ResonantFractalCognition(
         RFCConfig(dim=64, seed=0),
@@ -215,6 +250,8 @@ def test_direction_invariant_blocks_a_forbidden_region():
 
 
 def test_invariants_can_read_the_context():
+    """An invariant predicate can use the per-call context to decide vetoes."""
+
     codebook = _codebook()
     invariant = Invariant(
         name="context_gate",
@@ -229,6 +266,9 @@ def test_invariants_can_read_the_context():
 
 
 def test_reflection_only_moves_tunable_parameters_and_stays_bounded():
+    """Reflection must only adjust tunable parameters and
+    keep them within bounds."""
+
     dataset = make_composite(0, trials=40)
     mind = ResonantFractalCognition(
         RFCConfig(dim=dataset.dim, seed=0, reflect_every=8), codebook=dataset.codebook
@@ -247,6 +287,9 @@ def test_reflection_only_moves_tunable_parameters_and_stays_bounded():
 
 
 def test_reflection_rolls_back_when_reward_collapses():
+    """A sudden drop in reward should trigger a rollback to
+    the best-known parameters."""
+
     dataset = make_composite(0, trials=40)
     mind = ResonantFractalCognition(
         RFCConfig(
@@ -264,6 +307,9 @@ def test_reflection_rolls_back_when_reward_collapses():
 
 
 def test_reflection_waits_for_enough_history():
+    """Reflecting before enough episodes exist should be a
+    no-op with a reason."""
+
     mind = _mind(reflect_every=0)
     report = mind.reflect()
     assert report.applied is None
@@ -271,6 +317,9 @@ def test_reflection_waits_for_enough_history():
 
 
 def test_explain_mentions_the_answer_and_the_refusals():
+    """The explanation text should mention the answer and any
+    vetoed hypotheses."""
+
     dataset = make_composite(0, trials=4)
     banned = sorted(dataset.codebook)[0]
     mind = ResonantFractalCognition(
@@ -286,6 +335,8 @@ def test_explain_mentions_the_answer_and_the_refusals():
 
 
 def test_state_is_serialisable_and_complete():
+    """``state()`` should expose exactly the expected top-level keys."""
+
     mind = _mind()
     mind.perceive(np.random.default_rng(0).normal(size=64))
     state = mind.state()
