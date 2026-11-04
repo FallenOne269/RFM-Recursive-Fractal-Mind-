@@ -27,7 +27,9 @@ class ComponentSpec:
 
 
 DEFAULT_COMPONENTS: Mapping[str, ComponentSpec] = {
-    "fractal_engine": ComponentSpec("src.fractal_engine", "FractalEngine", "fractal_output"),
+    "fractal_engine": ComponentSpec(
+        "src.fractal_engine", "FractalEngine", "fractal_output"
+    ),
     "swarm_coordinator": ComponentSpec(
         "src.swarm_coordinator", "SwarmCoordinator", "swarm_output"
     ),
@@ -44,7 +46,9 @@ class RFAISystem:
     def __init__(
         self,
         config: Optional[MutableMapping[str, Any]] = None,
-        component_factories: Optional[Mapping[str, Callable[[Dict[str, Any]], Any]]] = None,
+        component_factories: Optional[
+            Mapping[str, Callable[[Dict[str, Any]], Any]]
+        ] = None,
     ) -> None:
         self.config = dict(config or {})
         self.component_factories = dict(component_factories or {})
@@ -89,7 +93,9 @@ class RFAISystem:
 
             self.components[name] = component
 
-    def _adapter_input(self, component: str, outputs: Dict[str, Any], base_input: Any) -> Any:
+    def _adapter_input(
+        self, component: str, outputs: Dict[str, Any], base_input: Any
+    ) -> Any:
         if component == "fractal_engine":
             return base_input
         if component == "swarm_coordinator":
@@ -155,7 +161,8 @@ class RFAISystem:
 
         return {
             "components": {
-                name: self.components.get(name) is not None for name in DEFAULT_COMPONENTS
+                name: self.components.get(name) is not None
+                for name in DEFAULT_COMPONENTS
             },
             "cycles": self.system_state["cycles"],
             "last_run": self.system_state["last_run"],

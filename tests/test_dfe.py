@@ -21,4 +21,3 @@ def test_encode_many_deterministic():
     ids2 = [f.fim_id for f in result2]
     assert ids1 != ids2  # unique ids
     assert len(result1) == len(inputs)
-
