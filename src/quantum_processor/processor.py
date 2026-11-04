@@ -30,14 +30,15 @@ class QuantumProcessor:
             return {"entangled_state": [], "stability": 0.0}
 
         fractal_values: List[float] = [
-            float(value)
-            for value in payload.get("fractal_output", {}).get("final", [])
+            float(value) for value in payload.get("fractal_output", {}).get("final", [])
         ]
         if not fractal_values:
             return {"entangled_state": [], "stability": 0.0}
 
         # Compress the classical signal into a pseudo quantum amplitude distribution.
-        amplitudes = [math.tanh(value / (idx + 1)) for idx, value in enumerate(fractal_values)]
+        amplitudes = [
+            math.tanh(value / (idx + 1)) for idx, value in enumerate(fractal_values)
+        ]
         norm = math.sqrt(sum(value * value for value in amplitudes)) or 1.0
         entangled_state = [value / norm for value in amplitudes]
 

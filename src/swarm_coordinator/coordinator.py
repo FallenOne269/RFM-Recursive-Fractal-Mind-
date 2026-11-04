@@ -26,7 +26,9 @@ class SwarmCoordinator:
         """Compute a consensus signal from fractal results."""
 
         if not isinstance(fractal_output, dict) or "final" not in fractal_output:
-            logger.warning("Swarm coordinator received unexpected input: %s", fractal_output)
+            logger.warning(
+                "Swarm coordinator received unexpected input: %s", fractal_output
+            )
             return {
                 "consensus": None,
                 "agent_votes": [],

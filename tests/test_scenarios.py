@@ -8,4 +8,3 @@ def test_scenarios_smoke():
     assert "task_completion_rate" in res_a
     assert "oscillation_score" in res_b
     assert "time_efficiency" in res_c
-

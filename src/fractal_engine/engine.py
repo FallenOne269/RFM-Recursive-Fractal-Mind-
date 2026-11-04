@@ -5,7 +5,11 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List
 
-from ..utils.validation import FractalEngineConfig, ValidationError, validate_input_payload
+from ..utils.validation import (
+    FractalEngineConfig,
+    ValidationError,
+    validate_input_payload,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +24,9 @@ class FractalEngine:
     def __init__(self, config: Dict[str, Any] | None = None) -> None:
         try:
             self.config = FractalEngineConfig(**(config or {}))
-        except ValidationError as exc:  # pragma: no cover - pydantic already tested elsewhere
+        except (
+            ValidationError
+        ) as exc:  # pragma: no cover - pydantic already tested elsewhere
             logger.error("Invalid fractal engine configuration: %s", exc)
             raise ValueError("Invalid fractal engine configuration") from exc
 

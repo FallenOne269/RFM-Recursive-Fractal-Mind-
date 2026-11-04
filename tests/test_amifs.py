@@ -26,4 +26,3 @@ def test_adaptive_component_cache():
     first = component.compute_delta(features, ctx)
     second = component.compute_delta(features, ctx)
     assert first == second
-

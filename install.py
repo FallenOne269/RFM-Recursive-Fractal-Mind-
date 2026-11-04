@@ -33,13 +33,17 @@ def verify_installation() -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Install and verify the RFAI system")
-    parser.add_argument("--verify", action="store_true", help="Run the test suite after installation")
+    parser.add_argument(
+        "--verify", action="store_true", help="Run the test suite after installation"
+    )
     parser.add_argument(
         "--noninteractive",
         action="store_true",
         help="Skip interactive prompts (reserved for future use)",
     )
-    parser.add_argument("--dev", action="store_true", help="Install developer dependencies")
+    parser.add_argument(
+        "--dev", action="store_true", help="Install developer dependencies"
+    )
     return parser.parse_args()
 
 

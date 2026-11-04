@@ -45,7 +45,9 @@ class MetaLearner:
             return {"score": 0.0, "recommendations": ["Collect more data"]}
 
         aggregate_score = mean(scores)
-        adjusted_score = aggregate_score * (1 + self.config.momentum * self.config.learning_rate)
+        adjusted_score = aggregate_score * (
+            1 + self.config.momentum * self.config.learning_rate
+        )
 
         swarm_confidence = payload.get("swarm_output", {}).get("confidence", 0)
         recommendations = [
@@ -54,11 +56,7 @@ class MetaLearner:
                 if adjusted_score >= 0.5
                 else "Increase exploration"
             ),
-            (
-                "Monitor confidence"
-                if swarm_confidence < 0.5
-                else "Leverage consensus"
-            ),
+            ("Monitor confidence" if swarm_confidence < 0.5 else "Leverage consensus"),
         ]
 
         logger.debug("Meta learner score %.3f", adjusted_score)
