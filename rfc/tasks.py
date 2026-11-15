@@ -58,6 +58,8 @@ STEPS = 24
 
 @dataclass
 class Dataset:
+    """A named task: a codebook of concepts plus labelled evidence samples."""
+
     name: str
     dim: int
     codebook: Dict[str, np.ndarray]
@@ -239,6 +241,8 @@ def make_drift(
     shift = trials // 2
 
     def coarse_interference() -> np.ndarray:
+        """Random low-frequency noise confined to the two coarsest bands."""
+
         bands = dyadic_decompose(rng.normal(size=dim), LEVELS)
         return interference * normalize_vector(bands[0].vector + bands[1].vector)
 
@@ -290,18 +294,26 @@ class FlatMatcher:
     name = "flat-cosine"
 
     def __init__(self, codebook: Dict[str, np.ndarray]):
+        """Store sorted labels and their normalized prototype vectors."""
+
         self.labels = sorted(codebook)
         self.matrix = np.stack(
             [normalize_vector(codebook[label]) for label in self.labels]
         )
 
     def scores(self, evidence: np.ndarray) -> np.ndarray:
+        """Cosine similarity between ``evidence`` and every prototype."""
+
         return self.matrix @ normalize_vector(evidence)
 
     def predict(self, evidence: np.ndarray) -> str:
+        """Return the label of the nearest prototype to ``evidence``."""
+
         return self.labels[int(np.argmax(self.scores(evidence)))]
 
     def predict_top(self, evidence: np.ndarray, count: int = 2) -> List[str]:
+        """Return the ``count`` nearest prototype labels, best first."""
+
         order = np.argsort(-self.scores(evidence))[:count]
         return [self.labels[int(index)] for index in order]
 
@@ -317,6 +329,8 @@ class BandMatcher:
         levels: int = LEVELS,
         equalization: float = 0.25,
     ):
+        """Decompose every codebook prototype into scale bands up front."""
+
         self.labels = sorted(codebook)
         self.levels = levels
         self.equalization = equalization
@@ -328,6 +342,8 @@ class BandMatcher:
         }
 
     def predict(self, evidence: np.ndarray) -> str:
+        """Return the label whose scale-equalised band match is strongest."""
+
         directions, weights = band_matrix(
             dyadic_decompose(evidence, self.levels), self.equalization
         )
@@ -352,12 +368,17 @@ class GreedyPursuit:
     name = "greedy-pursuit"
 
     def __init__(self, codebook: Dict[str, np.ndarray]):
+        """Store sorted labels and their normalized prototype vectors."""
+
         self.labels = sorted(codebook)
         self.matrix = np.stack(
             [normalize_vector(codebook[label]) for label in self.labels]
         )
 
     def predict_top(self, evidence: np.ndarray, count: int = 2) -> List[str]:
+        """Greedily pick and subtract the best-matching prototype
+        ``count`` times."""
+
         residual = np.asarray(evidence, dtype=float).copy()
         chosen: List[str] = []
         for _ in range(count):
@@ -376,6 +397,8 @@ class GreedyPursuit:
 # ------------------------------------------------------------------ evaluation
 @dataclass
 class TaskResult:
+    """Scores, detail, and notes produced by running one benchmark task."""
+
     task: str
     scores: Dict[str, float] = dataclass_field(default_factory=dict)
     detail: Dict[str, object] = dataclass_field(default_factory=dict)
@@ -389,6 +412,9 @@ def _build_mind(
     overrides: Optional[Dict[str, float]] = None,
     invariants=None,
 ) -> ResonantFractalCognition:
+    """Build an ``RFCConfig``/``ResonantFractalCognition`` pair
+    sized for ``dataset``."""
+
     config = RFCConfig(
         dim=dataset.dim,
         levels=LEVELS,
@@ -404,12 +430,16 @@ def _build_mind(
 
 
 def _accuracy(predictions: Sequence[str], truths: Sequence[str]) -> float:
+    """Fraction of ``predictions`` that match the corresponding ``truths``."""
+
     if not truths:
         return 0.0
     return float(np.mean([p == t for p, t in zip(predictions, truths)]))
 
 
 def evaluate_baselines(dataset: Dataset) -> Dict[str, float]:
+    """Run the flat-cosine and band-cosine baselines over ``dataset``."""
+
     truths = [label for _, label in dataset.samples]
     results: Dict[str, float] = {}
     for matcher in (FlatMatcher(dataset.codebook), BandMatcher(dataset.codebook)):
@@ -420,6 +450,8 @@ def evaluate_baselines(dataset: Dataset) -> Dict[str, float]:
 
 
 def run_composite(seed: int = 0) -> TaskResult:
+    """Run the composite classification task against baselines and RFC."""
+
     dataset = make_composite(seed)
     scores = evaluate_baselines(dataset)
     mind = _build_mind(dataset, seed)
@@ -436,6 +468,8 @@ def run_composite(seed: int = 0) -> TaskResult:
 
 
 def run_superposition(seed: int = 1) -> TaskResult:
+    """Run the two-source decomposition task against baselines and RFC."""
+
     dataset = make_superposition(seed)
     truth_sets = [frozenset(pair) for pair in dataset.extra["pairs"]]  # type: ignore[index]
 
@@ -483,6 +517,8 @@ def run_superposition(seed: int = 1) -> TaskResult:
 
 
 def run_stream(seed: int = 4) -> TaskResult:
+    """Run the skewed-stream consolidation task against baselines and RFC."""
+
     dataset = make_stream(seed)
     frequent = set(dataset.extra["frequent"])  # type: ignore[arg-type]
     truths = [label for _, label in dataset.samples]
@@ -490,6 +526,9 @@ def run_stream(seed: int = 4) -> TaskResult:
     detail: Dict[str, object] = {}
 
     def split(hits: Sequence[bool]) -> Tuple[float, float]:
+        """Split a hit list into (frequent-class accuracy,
+        rare-class accuracy)."""
+
         common = [hit for hit, truth in zip(hits, truths) if truth in frequent]
         uncommon = [hit for hit, truth in zip(hits, truths) if truth not in frequent]
         return (
@@ -585,6 +624,8 @@ def run_drift(seed: int = 0, seeds: int = 6) -> TaskResult:
 
 
 def run_safety(seed: int = 3) -> TaskResult:
+    """Run the forbidden-class safety task, guarded and unguarded."""
+
     dataset = make_safety(seed)
     invariant = forbidden_labels(
         "forbidden_class", ["forbidden"], description="never output the forbidden class"
@@ -615,6 +656,8 @@ def run_safety(seed: int = 3) -> TaskResult:
 
 
 def run_benchmark(seed: int = 0) -> List[TaskResult]:
+    """Run the full benchmark suite and return one ``TaskResult`` per task."""
+
     return [
         run_composite(seed),
         run_superposition(seed + 1),
@@ -625,6 +668,8 @@ def run_benchmark(seed: int = 0) -> List[TaskResult]:
 
 
 def format_report(results: Sequence[TaskResult]) -> str:
+    """Render benchmark results as a human-readable multi-line report."""
+
     lines: List[str] = []
     for result in results:
         lines.append(f"[{result.task}] {result.notes}")

@@ -11,6 +11,8 @@ from rfc.scale_space import band_matrix, dyadic_decompose, temporal_bands
 
 
 def test_dyadic_bands_reconstruct_the_signal_exactly():
+    """Summing all dyadic bands must reconstruct the original signal."""
+
     rng = np.random.default_rng(0)
     signal = rng.normal(size=64)
     bands = dyadic_decompose(signal, levels=4)
@@ -19,6 +21,9 @@ def test_dyadic_bands_reconstruct_the_signal_exactly():
 
 
 def test_dyadic_bands_separate_frequencies():
+    """Slow signals should carry more energy in coarse
+    bands, fast ones in fine bands."""
+
     grid = np.linspace(0.0, 2.0 * np.pi, 64, endpoint=False)
     slow = np.sin(grid)
     fast = np.cos(np.pi * np.arange(64, dtype=float))
@@ -29,6 +34,9 @@ def test_dyadic_bands_separate_frequencies():
 
 
 def test_band_equalization_moves_weight_toward_quiet_bands():
+    """Full equalization should give every band equal
+    weight regardless of energy."""
+
     grid = np.linspace(0.0, 2.0 * np.pi, 64, endpoint=False)
     signal = np.sin(grid) + 0.05 * np.cos(np.pi * np.arange(64, dtype=float))
     bands = dyadic_decompose(signal, 4)
@@ -39,6 +47,9 @@ def test_band_equalization_moves_weight_toward_quiet_bands():
 
 
 def test_temporal_bands_split_slow_from_fast():
+    """Temporal bands should separate a long-run constant
+    from a recent change."""
+
     history = np.zeros((8, 3))
     history[:, 0] = 1.0
     history[-2:, 1] = 1.0
@@ -67,6 +78,9 @@ def test_label_read_out_is_conjunctive_across_scales():
 
 
 def test_measure_is_deterministic_and_prefers_the_loudest():
+    """``measure`` should deterministically return the
+    highest-amplitude hypothesis."""
+
     field = ResonantField(dim=3)
     field.spawn([1.0, 0.0, 0.0], scale=0, label="a", amplitude=0.2)
     winner = field.spawn([0.0, 1.0, 0.0], scale=0, label="b", amplitude=0.9)
@@ -75,6 +89,9 @@ def test_measure_is_deterministic_and_prefers_the_loudest():
 
 
 def test_normalize_conserves_mass_within_each_scale():
+    """Normalizing the field should conserve squared
+    amplitude within each scale."""
+
     field = ResonantField(dim=2)
     field.spawn([1.0, 0.0], scale=0, label="a", amplitude=3.0)
     field.spawn([0.0, 1.0], scale=0, label="b", amplitude=4.0)
@@ -117,6 +134,9 @@ def test_resonance_selects_the_matching_scale():
 
 
 def test_contradicted_hypotheses_end_up_in_antiphase():
+    """A hypothesis contradicted by its own band should
+    settle into antiphase."""
+
     dim = 16
     evidence = np.zeros(dim)
     evidence[:8] = 1.0
@@ -130,6 +150,8 @@ def test_contradicted_hypotheses_end_up_in_antiphase():
 
 
 def test_field_is_bounded_under_a_long_run():
+    """Amplitudes must stay finite and bounded over a long run of steps."""
+
     rng = np.random.default_rng(11)
     dim = 32
     bands = dyadic_decompose(rng.normal(size=dim), 4)
@@ -146,6 +168,9 @@ def test_field_is_bounded_under_a_long_run():
 
 
 def test_operator_parameter_updates_stay_inside_their_bounds():
+    """Parameter deltas must clip to bounds and reject
+    unknown parameter names."""
+
     params = OperatorParams()
     raised = params.with_deltas({"coupling": 99.0})
     lowered = params.with_deltas({"damping": -99.0})
@@ -175,6 +200,8 @@ def test_pivotality_finds_the_band_that_decided_the_answer():
 
 
 def test_pivotality_is_empty_without_an_answer():
+    """With no answer label, no band should be reported as pivotal."""
+
     field = ResonantField(dim=2)
     field.spawn([1.0, 0.0], scale=0, label="a", amplitude=0.5)
     field.spawn([0.0, 1.0], scale=1, label="b", amplitude=0.5)
@@ -182,6 +209,9 @@ def test_pivotality_is_empty_without_an_answer():
 
 
 def test_band_trust_is_bounded_and_local():
+    """Band-trust updates must clip to bounds and only
+    affect the targeted band."""
+
     params = OperatorParams()
     tuned = params.with_band_trust(2, 0.5).with_band_trust(2, 99.0)
     low, high = BAND_TRUST_BOUNDS
@@ -216,6 +246,9 @@ def test_band_trust_changes_what_the_read_out_believes():
     evidence = dataset.samples[0][0]
 
     def distribution(trust):
+        """Label alternatives for one episode under the given
+        ``band_trust`` vector."""
+
         config = RFCConfig(
             dim=dataset.dim, seed=0, params=OperatorParams(band_trust=trust)
         )
